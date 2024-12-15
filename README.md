@@ -9,5 +9,5 @@
 
 ## Examples
 
-1. TODO Inline and block comments
-2. TODO Simple variable assignment
+1. `node examples/01.mjs` Inline and block comments
+2. `node examples/02.mjs` Simple variable assignment
