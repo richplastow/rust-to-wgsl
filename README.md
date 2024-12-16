@@ -11,6 +11,7 @@
 
 1. `node examples/run-01.mjs` Inline and block comments
 2. `node examples/run-02.mjs` Rust’s `let` is equivalent to WGSL’s `var`
+3. `node examples/run-03.mjs` Rust strings and chars have no WGSL equivalent
 
 ## Unit tests
 

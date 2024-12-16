@@ -9,14 +9,14 @@ var RUST_TO_WGSL = (function (exports) {
         let partRef = parts[0];
 
         const rust = rustLines.join('\n');
-        for (let i=0; i<rust.length; i++) {
-            const c0 = rust[i];
-            const c1 = rust[i+1]; // possibly undefined
+        for (let pos=0; pos<rust.length; pos++) {
+            const c0 = rust[pos];
+            const c1 = rust[pos+1]; // possibly undefined
 
             switch (partRef.kind) {
                 case 'TOP':
                     if (c0 === '/' && c1 === '*') {
-                        i += 1;
+                        pos += 1;
                         partRef = {
                             depth: 1,
                             kind: 'BLOCK_COMMENT',
@@ -24,10 +24,17 @@ var RUST_TO_WGSL = (function (exports) {
                         };
                         parts.push(partRef);
                     } else if (c0 === '/' && c1 === '/') {
-                        i += 1;
+                        pos += 1;
                         partRef = {
                             kind: 'INLINE_COMMENT',
                             rust: ['/','/'],
+                        };
+                        parts.push(partRef);
+                    } else if (c0 === '"') {
+                        partRef = {
+                            kind: 'STRING_LITERAL',
+                            pos, // used for error message
+                            rust: ['"'],
                         };
                         parts.push(partRef);
                     } else {
@@ -36,11 +43,11 @@ var RUST_TO_WGSL = (function (exports) {
                     break;
                 case 'BLOCK_COMMENT':
                     if (c0 === '/' && c1 === '*') {
-                        i += 1;
+                        pos += 1;
                         partRef.depth += 1;
                         partRef.rust.push('/','*');
                     } else if (c0 === '*' && c1 === '/') {
-                        i += 1;
+                        pos += 1;
                         partRef.depth -= 1;
                         partRef.rust.push('*','/');
                         if (partRef.depth === 0) {
@@ -56,15 +63,23 @@ var RUST_TO_WGSL = (function (exports) {
                     }
                     break;
                 case 'INLINE_COMMENT':
+                    partRef.rust.push(c0);
                     if (c0 === '\n') {
-                        partRef.rust.push('\n');
                         partRef = {
                             kind: 'TOP',
                             rust: [],
                         };
                         parts.push(partRef);
-                    } else {
-                        partRef.rust.push(c0);
+                    }
+                    break;
+                case 'STRING_LITERAL':
+                    partRef.rust.push(c0);
+                    if (c0 === '"') {
+                        partRef = {
+                            kind: 'TOP',
+                            rust: [],
+                        };
+                        parts.push(partRef);
                     }
                     break;
             }
@@ -86,6 +101,14 @@ let b: u32 = 2;
 let c = a + b;
 // let d: u32 = 4;
 /** /*/* let e: u32 = 5; */*/ let f: u32 = 5; */
+`;
+
+    const rust03 =
+`let a = "Apple";
+// let b = "Banana";
+/* let c = "Cherry"; */
+let d = "Not an // inline comment";
+let e = "Not a /* block */ comment";
 `;
 
     const keywordChars = new Set(['l','e','t']);
@@ -128,15 +151,18 @@ let c = a + b;
 
         const rustParts = rustToThreeParts(rust);
 
-        for (const { depth, kind, rust } of rustParts) {
+        for (const { depth, kind, pos, rust } of rustParts) {
             switch (kind) {
                 case 'TOP':
                     wgsl.push(topToWGSL(rust));
                     break;
                 case 'BLOCK_COMMENT':
                     if (depth) errors.push('Unterminated block comment');
-                    // TODO identify the block
                 case 'INLINE_COMMENT':
+                    wgsl.push(rust.join(''));
+                    break;
+                case 'STRING_LITERAL':
+                    errors.push(`Contains a string at char ${pos}`);
                     wgsl.push(rust.join(''));
                     break;
             }
@@ -150,6 +176,7 @@ let c = a + b;
 
     exports.rust01 = rust01;
     exports.rust02 = rust02;
+    exports.rust03 = rust03;
     exports.rustToWGSL = rustToWGSL;
 
     return exports;

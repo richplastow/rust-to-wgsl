@@ -9,7 +9,7 @@ import { rust01, expectedWGSL01 } from './code-01.mjs';
 export const runExample01 = () => rustToWGSL(rust01);
 
 export const testExample01 = () => {
-    deep(runExample01(), { errors: [], wgsl: expectedWGSL01}, 'Example 01');
+    deep(runExample01(), { errors: [], wgsl: expectedWGSL01 }, 'Example 01');
     console.log('OK: example01() passed!');
 };
 
