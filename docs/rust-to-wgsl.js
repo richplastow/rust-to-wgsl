@@ -30,11 +30,18 @@ var RUST_TO_WGSL = (function (exports) {
                             rust: ['/','/'],
                         };
                         parts.push(partRef);
+                    } else if (c0 === "'") {
+                        partRef = {
+                            kind: 'CHAR_LITERAL',
+                            pos, // used for error message
+                            rust: [c0],
+                        };
+                        parts.push(partRef);
                     } else if (c0 === '"') {
                         partRef = {
                             kind: 'STRING_LITERAL',
                             pos, // used for error message
-                            rust: ['"'],
+                            rust: [c0],
                         };
                         parts.push(partRef);
                     } else {
@@ -65,6 +72,16 @@ var RUST_TO_WGSL = (function (exports) {
                 case 'INLINE_COMMENT':
                     partRef.rust.push(c0);
                     if (c0 === '\n') {
+                        partRef = {
+                            kind: 'TOP',
+                            rust: [],
+                        };
+                        parts.push(partRef);
+                    }
+                    break;
+                case 'CHAR_LITERAL':
+                    partRef.rust.push(c0);
+                    if (c0 === "'") {
                         partRef = {
                             kind: 'TOP',
                             rust: [],
@@ -110,6 +127,13 @@ let c = a + b;
 `;
 
     const rust03 =
+`let a = 'A';
+// let b = 'B'; commented-out with an inline comment
+/* let c = 'C'; commented-out with a block comment */
+let eAcute = '\\u{c9}';
+`;
+
+    const rust04 =
 `let a = "Can \\\\ contain \\" backslashes";
 // let b = "Commented-out with an inline comment";
 /* let c = "Commented-out with a block comment"; */
@@ -167,15 +191,25 @@ let e = "Not a /* block */ comment";
                 case 'INLINE_COMMENT':
                     wgsl.push(rust.join(''));
                     break;
+                case 'CHAR_LITERAL':
+                    errors.push(`Contains a char at pos ${pos}`);
+                    wgsl.push(rust.join(''));
+                    break;
                 case 'STRING_LITERAL':
-                    errors.push(`Contains a string at char ${pos}`);
+                    errors.push(`Contains a string at pos ${pos}`);
                     wgsl.push(rust.join(''));
                     break;
             }
         }
 
-        if (rustParts[rustParts.length-1].kind === 'STRING_LITERAL')
-            errors.push('Unterminated string literal');
+        switch (rustParts[rustParts.length-1].kind) {
+            case 'CHAR_LITERAL':
+                errors.push('Unterminated char literal');
+                break;
+            case 'STRING_LITERAL':
+                errors.push('Unterminated string literal');
+                break;
+        }
 
         return {
             errors,
@@ -186,6 +220,7 @@ let e = "Not a /* block */ comment";
     exports.rust01 = rust01;
     exports.rust02 = rust02;
     exports.rust03 = rust03;
+    exports.rust04 = rust04;
     exports.rustToWGSL = rustToWGSL;
 
     return exports;

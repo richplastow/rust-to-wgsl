@@ -1,15 +1,13 @@
 export const rust03 =
-`let a = "Can \\\\ contain \\" backslashes";
-// let b = "Commented-out with an inline comment";
-/* let c = "Commented-out with a block comment"; */
-let d = "Not an // inline comment";
-let e = "Not a /* block */ comment";
+`let a = 'A';
+// let b = 'B'; commented-out with an inline comment
+/* let c = 'C'; commented-out with a block comment */
+let eAcute = '\\u{c9}';
 `;
 
 export const expectedWGSL03 =
-`var a = "Can \\\\ contain \\" backslashes";
-// let b = "Commented-out with an inline comment";
-/* let c = "Commented-out with a block comment"; */
-var d = "Not an // inline comment";
-var e = "Not a /* block */ comment";
+`var a = 'A';
+// let b = 'B'; commented-out with an inline comment
+/* let c = 'C'; commented-out with a block comment */
+var eAcute = '\\u{c9}';
 `;

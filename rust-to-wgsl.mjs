@@ -4,6 +4,7 @@ import { rustToThreeParts } from './lib/rust-to-three-parts.mjs';
 export { rust01 } from './examples/code-01.mjs'
 export { rust02 } from './examples/code-02.mjs'
 export { rust03 } from './examples/code-03.mjs'
+export { rust04 } from './examples/code-04.mjs'
 
 const keywordChars = new Set(['l','e','t']);
 const isKeywordChar = (char) => keywordChars.has(char);
@@ -55,15 +56,25 @@ export const rustToWGSL = (rust) => {
             case 'INLINE_COMMENT':
                 wgsl.push(rust.join(''));
                 break;
+            case 'CHAR_LITERAL':
+                errors.push(`Contains a char at pos ${pos}`);
+                wgsl.push(rust.join(''));
+                break;
             case 'STRING_LITERAL':
-                errors.push(`Contains a string at char ${pos}`);
+                errors.push(`Contains a string at pos ${pos}`);
                 wgsl.push(rust.join(''));
                 break;
         }
     }
 
-    if (rustParts[rustParts.length-1].kind === 'STRING_LITERAL')
-        errors.push('Unterminated string literal');
+    switch (rustParts[rustParts.length-1].kind) {
+        case 'CHAR_LITERAL':
+            errors.push('Unterminated char literal');
+            break;
+        case 'STRING_LITERAL':
+            errors.push('Unterminated string literal');
+            break;
+    }
 
     return {
         errors,

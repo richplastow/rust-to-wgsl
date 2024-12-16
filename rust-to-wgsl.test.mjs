@@ -30,10 +30,22 @@ export const testRustToWGSL = () => {
     );
 
     deep(
+        fn("'"),
+        {
+            errors: [
+                'Contains a char at pos 0',
+                'Unterminated char literal',
+            ],
+            wgsl: "'",
+        },
+        'Minimal unterminated char literal'
+    );
+
+    deep(
         fn('"'),
         {
             errors: [
-                'Contains a string at char 0',
+                'Contains a string at pos 0',
                 'Unterminated string literal',
             ],
             wgsl: '"',
@@ -45,8 +57,8 @@ export const testRustToWGSL = () => {
         fn('start "ok string" " \\" end'),
         {
             errors: [
-                'Contains a string at char 6',
-                'Contains a string at char 18',
+                'Contains a string at pos 6',
+                'Contains a string at pos 18',
                 'Unterminated string literal',
             ],
             wgsl: 'start "ok string" " \\" end',
