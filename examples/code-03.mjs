@@ -1,15 +1,15 @@
 export const rust03 =
-`let a = "Apple";
-// let b = "Banana";
-/* let c = "Cherry"; */
+`let a = "Can \\\\ contain \\" backslashes";
+// let b = "Commented-out with an inline comment";
+/* let c = "Commented-out with a block comment"; */
 let d = "Not an // inline comment";
 let e = "Not a /* block */ comment";
 `;
 
 export const expectedWGSL03 =
-`var a = "Apple";
-// let b = "Banana";
-/* let c = "Cherry"; */
+`var a = "Can \\\\ contain \\" backslashes";
+// let b = "Commented-out with an inline comment";
+/* let c = "Commented-out with a block comment"; */
 var d = "Not an // inline comment";
 var e = "Not a /* block */ comment";
 `;

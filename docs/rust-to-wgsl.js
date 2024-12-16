@@ -74,7 +74,13 @@ var RUST_TO_WGSL = (function (exports) {
                     break;
                 case 'STRING_LITERAL':
                     partRef.rust.push(c0);
-                    if (c0 === '"') {
+                    if (c0 === '\\' && c1 === '\\') { // escaped backslash
+                        pos += 1;
+                        partRef.rust.push(c1);
+                    } else if (c0 === '\\' && c1 === '"') { // escaped double-quote
+                        pos += 1;
+                        partRef.rust.push(c1);
+                    } else if (c0 === '"') {
                         partRef = {
                             kind: 'TOP',
                             rust: [],
@@ -104,9 +110,9 @@ let c = a + b;
 `;
 
     const rust03 =
-`let a = "Apple";
-// let b = "Banana";
-/* let c = "Cherry"; */
+`let a = "Can \\\\ contain \\" backslashes";
+// let b = "Commented-out with an inline comment";
+/* let c = "Commented-out with a block comment"; */
 let d = "Not an // inline comment";
 let e = "Not a /* block */ comment";
 `;
@@ -167,6 +173,9 @@ let e = "Not a /* block */ comment";
                     break;
             }
         }
+
+        if (rustParts[rustParts.length-1].kind === 'STRING_LITERAL')
+            errors.push('Unterminated string literal');
 
         return {
             errors,

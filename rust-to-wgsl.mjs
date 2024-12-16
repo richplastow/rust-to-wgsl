@@ -62,6 +62,9 @@ export const rustToWGSL = (rust) => {
         }
     }
 
+    if (rustParts[rustParts.length-1].kind === 'STRING_LITERAL')
+        errors.push('Unterminated string literal');
+
     return {
         errors,
         wgsl: wgsl.join(''),

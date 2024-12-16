@@ -9,8 +9,8 @@ export const testExample03 = () => {
     deep(runExample03(), {
         errors: [
             'Contains a string at char 8',
-            'Contains a string at char 70',
-            'Contains a string at char 106',
+            'Contains a string at char 152',
+            'Contains a string at char 188',
         ],
         wgsl: expectedWGSL03
     }, 'Example 03');
