@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, height=device-height,
+    initial-scale=1.0, minimum-scale=1.0, user-scalable=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="icon" href="data:;base64,iVBORwOKGO=" />
+  <title>Rust to WGSL Playground</title>
+
+  <script src="./rust-to-wgsl.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+    html {
+      font-size: 62.5%; /* 1em = 10px */
+    }
+    body {
+      box-sizing: border-box;
+      width: 80em;
+      margin: 0 auto;
+    }
+    nav li {
+      display: inline-block;
+    }
+    nav li a {
+      display: inline-block;
+      padding: 0.5em 1em;
+      border-radius: 0.5em;
+      outline: none!important;
+      text-decoration: none;
+      transition: color 0.5s, background 0.5s;
+    }
+    nav ul, p {
+      padding: 0 0.5em;
+    }
+    h2 {
+      padding: 0 0.25em;
+    }
+    textarea, pre, code {
+      font: 1em/1.8em Monaco, Consolas, "Lucida Console", monospace;
+    }
+    textarea, pre {
+      display: inline-block;
+      box-sizing: border-box;
+      width: 40em;
+      height: 30em;
+      margin: 0;
+      padding: 0.5em 1em;
+      vertical-align: top;
+      border-radius: 1em;
+      outline: none!important;
+    }
+
+    body { font-size: 2em; }
+    @media screen and (max-width: 1640px) { body { font-size: 1.50em; } }
+    @media screen and (max-width: 1220px) { body { font-size: 1.25em; } }
+    @media screen and (max-width: 1000px) {
+      body { width: 60em; font-size: 1.6vw; }
+      textarea, pre { width: 30em; }
+    }
+    @media screen and (max-width: 810px) {
+      body { font-size: 2.4vw; }
+      body, textarea, pre { width: 100%; }
+    }
+
+    html, body { background: #080808; color: #eee; }
+    nav li a { background: #0d2266; color: #eee; }
+    nav li a:hover { color: #fff; background: #00508d; }
+    #input  { background: #0d2266; }
+    #output { background: #444444; }
+    textarea, pre { border: 0.5em solid #080808; color: #eee; }
+    @media (prefers-color-scheme: light) {
+      html, body { background: #e8e8e8; color: #111; }
+      nav li a { background: #c0ccee; color: #111; }
+      nav li a:hover { color: #000; background: #ccd8f8; }
+      #input  { background: #c0ccee; }
+      #output { background: #bbbbbb; }
+      textarea, pre { border: 0.5em solid #e8e8e8; color: #111; }
+    }
+  </style>
+</head>
+<body>
+  <nav><ul>
+    <li><a href="https://richplastow.com/rust-to-wgsl/">Playground</a></li>
+    <li><a href="https://github.com/richplastow/rust-to-wgsl">Repo</a></li>
+  </ul></nav>
+  <h2>Rust to WGSL Playground</h2>
+  <p>Live coding demo for <code>rust-to-wgsl</code>.</p>
+  <nav id="load-example"><ul>
+    <li><a href="#" data-example="01">1. Inline and block comments</a></li>
+    <li><a href="#" data-example="02">2. Rust’s `let` is equivalent to WGSL’s `var`</a></li>
+  </ul></nav>
+  <textarea id="input">Loading...</textarea><pre id="output">Loading...</pre>
+
+  <script>
+    // Dependencies.
+    const { rustToWGSL } = window.RUST_TO_WGSL;
+
+    // HTML elements.
+    const $input = document.querySelector('#input');
+    const $output = document.querySelector('#output');
+    const $loadExample = document.querySelector('#load-example');
+
+    // Takes the content of the input <textarea>, uses rustToWGSL() to transform
+    // it, and displays the result in the output <pre>.
+    const onInputChange = () => $output.innerText = rustToWGSL($input.value);
+
+    // Parse the input when it changes.
+    $input.addEventListener('keyup', onInputChange);
+
+    // Parse the input when the page loads.
+    $input.value = window.RUST_TO_WGSL.rust02;
+    onInputChange();
+
+    // Change the input when a 'load-example' button is clicked.
+    $loadExample.addEventListener('click', (evt) => {
+      evt.preventDefault();
+      const example = evt.target.getAttribute('data-example');
+      const rust = window.RUST_TO_WGSL[`rust${example}`]; // eg `rust02`
+      if (!rust) throw Error(`RUST_TO_WGSL.rust${example} is undefined`);
+      $input.value = rust;
+      onInputChange();
+    })
+  </script>
+
+</body>
+</html>

@@ -1,5 +1,8 @@
 import { rustToThreeParts } from './lib/rust-to-three-parts.mjs';
 
+export { rust01 } from './examples/code-01.mjs'
+export { rust02 } from './examples/code-02.mjs'
+
 const keywordChars = new Set(['l','e','t']);
 const isKeywordChar = (char) => keywordChars.has(char);
 
