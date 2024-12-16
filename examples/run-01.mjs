@@ -1,4 +1,4 @@
-import { equal } from 'assert';
+import { deepStrictEqual as deep } from 'assert';
 import { rustToWGSL } from '../rust-to-wgsl.mjs';
 import { rust01, expectedWGSL01 } from './code-01.mjs';
 
@@ -9,7 +9,7 @@ import { rust01, expectedWGSL01 } from './code-01.mjs';
 export const runExample01 = () => rustToWGSL(rust01);
 
 export const testExample01 = () => {
-    equal(runExample01(), expectedWGSL01, 'Example 01');
+    deep(runExample01(), { errors: [], wgsl: expectedWGSL01}, 'Example 01');
     console.log('OK: example01() passed!');
 };
 
@@ -20,5 +20,8 @@ if (
     process.argv[1][0] === '/' && // ...which starts "/"
     import.meta.url && // has a current filename...
     import.meta.url.slice(0, 8) === 'file:///' && // ...which starts "file:///"
-    process.argv[1] === decodeURIComponent(import.meta.url).slice(7) // 
-) console.log(`rust:\n${rust01}\nwgsl:\n${runExample01()}\n`);
+    process.argv[1] === decodeURIComponent(import.meta.url).slice(7) // they match
+) {
+    const { errors, wgsl } = runExample01();
+    console.log(`rust:\n${rust01}\nwgsl:\n${wgsl}\nerrors: ${errors.length}`);
+}

@@ -38,22 +38,27 @@ const topToWGSL = (rust) => {
  * @returns  WGSL source code
  */
 export const rustToWGSL = (rust) => {
+    const errors = [];
     const wgsl = [];
 
     const rustParts = rustToThreeParts(rust);
 
-    for (const { kind, rust } of rustParts) {
+    for (const { depth, kind, rust } of rustParts) {
         switch (kind) {
             case 'TOP':
                 wgsl.push(topToWGSL(rust));
                 break;
             case 'BLOCK_COMMENT':
-                // TODO next check for unterminated block comment (has `depth`)
+                if (depth) errors.push('Unterminated block comment');
+                // TODO identify the block
             case 'INLINE_COMMENT':
                 wgsl.push(rust.join(''));
                 break;
         }
     }
 
-    return wgsl.join('');
+    return {
+        errors,
+        wgsl: wgsl.join(''),
+    };
 }

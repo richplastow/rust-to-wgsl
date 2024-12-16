@@ -54,6 +54,10 @@
       border-radius: 1em;
       outline: none!important;
     }
+    pre#results {
+      width: 80em;
+      height: 10em;
+    }
 
     body { font-size: 2em; }
     @media screen and (max-width: 1640px) { body { font-size: 1.50em; } }
@@ -61,17 +65,19 @@
     @media screen and (max-width: 1000px) {
       body { width: 60em; font-size: 1.6vw; }
       textarea, pre { width: 30em; }
+      pre#results { width: 60em; }
     }
     @media screen and (max-width: 810px) {
       body { font-size: 2.4vw; }
-      body, textarea, pre { width: 100%; }
+      body, textarea, pre, pre#results { width: 100%; }
     }
 
     html, body { background: #080808; color: #eee; }
     nav li a { background: #0d2266; color: #eee; }
     nav li a:hover { color: #fff; background: #00508d; }
     #input  { background: #0d2266; }
-    #output { background: #444444; }
+    #output, #results { background: #444444; transition: background 0.5s; }
+    body.wgsl-errors #output, body.wgsl-errors #results { background: #663333; }
     textarea, pre { border: 0.5em solid #080808; color: #eee; }
     @media (prefers-color-scheme: light) {
       html, body { background: #e8e8e8; color: #111; }
@@ -79,6 +85,7 @@
       nav li a:hover { color: #000; background: #ccd8f8; }
       #input  { background: #c0ccee; }
       #output { background: #bbbbbb; }
+      body.wgsl-errors #output, body.wgsl-errors #results { background: #cc9999; }
       textarea, pre { border: 0.5em solid #e8e8e8; color: #111; }
     }
   </style>
@@ -95,6 +102,7 @@
     <li><a href="#" data-example="02">2. Rust’s `let` is equivalent to WGSL’s `var`</a></li>
   </ul></nav>
   <textarea id="input">Loading...</textarea><pre id="output">Loading...</pre>
+  <pre id="results">Loading...</pre>
 
   <script>
     // Dependencies.
@@ -103,11 +111,22 @@
     // HTML elements.
     const $input = document.querySelector('#input');
     const $output = document.querySelector('#output');
+    const $results = document.querySelector('#results');
     const $loadExample = document.querySelector('#load-example');
 
     // Takes the content of the input <textarea>, uses rustToWGSL() to transform
-    // it, and displays the result in the output <pre>.
-    const onInputChange = () => $output.innerText = rustToWGSL($input.value);
+    // it, and displays the result in the output <pre>. Also, shows any errors.
+    const onInputChange = () => {
+      const { errors, wgsl } = rustToWGSL($input.value);
+      $output.innerText = wgsl;
+      if (errors.length) {
+        document.body.classList.add('wgsl-errors');
+        $results.innerText = errors.join('\n');
+      } else {
+        document.body.classList.remove('wgsl-errors');
+        $results.innerText = 'No errors';
+      }
+    };
 
     // Parse the input when it changes.
     $input.addEventListener('keyup', onInputChange);
