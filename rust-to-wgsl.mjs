@@ -1,4 +1,4 @@
-import { determineCommentsAndStrings } from './lib/determine-comments-and-strings.mjs';
+import { rustToThreeParts } from './lib/rust-to-three-parts.mjs';
 
 const keywordChars = new Set(['l','e','t']);
 const isKeywordChar = (char) => keywordChars.has(char);
@@ -37,7 +37,7 @@ const topToWGSL = (rust) => {
 export const rustToWGSL = (rust) => {
     const wgsl = [];
 
-    const rustParts = determineCommentsAndStrings(rust);
+    const rustParts = rustToThreeParts(rust);
 
     for (const { kind, rust } of rustParts) {
         switch (kind) {
@@ -45,6 +45,7 @@ export const rustToWGSL = (rust) => {
                 wgsl.push(topToWGSL(rust));
                 break;
             case 'BLOCK_COMMENT':
+                // TODO next check for unterminated block comment (has `depth`)
             case 'INLINE_COMMENT':
                 wgsl.push(rust.join(''));
                 break;
