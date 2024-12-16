@@ -11,3 +11,13 @@
 
 1. `node examples/01.mjs` Inline and block comments
 2. `node examples/02.mjs` Simple variable assignment
+
+## Unit tests
+
+`node test.mjs`
+
+## Resources
+
+- <https://play.rust-lang.org/>
+- <https://shader-playground.timjones.io/> with Input format ‘WGSL’, Compiler #1
+  ‘Naga v0.19.3’, and Outfut format ‘WGSL’

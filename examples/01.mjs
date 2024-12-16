@@ -4,11 +4,14 @@ const rust = `
 // Inline comment
 /* Block
    comment */
+/* Nested /* comment */ */
 `;
+
+export const expectedWGSL = rust;
 
 /** #### 1. Inline and block comments
  * - Comments are basically the same in Rust and WGSL
- * - TODO deal with nested block comments (allowed in rs, but probably not WGSL)
+ * - TODO double check that nested block comments are allowed in WGSL
  */
 export const example_01 = () => rustToWGSL(rust);
 

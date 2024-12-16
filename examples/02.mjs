@@ -4,11 +4,19 @@ const rust = `
 let a: u32 = 1;
 let b: u32 = 2;
 let c = a + b;
+// let d: u32 = 4;
+`;
+
+export const expectedWGSL = `
+var a: u32 = 1;
+var b: u32 = 2;
+var c = a + b;
+// let d: u32 = 4;
 `;
 
 /** #### 2. Simple variable assignment
- * - In this case, no change is needed to the Rust source code
- * - TODO deal with similar examples which DO need transformation
+ * - Rust’s `let` is equivalent to WGSL’s `var`
+ * - TODO deal with similar variable-assignment transformations
  */
 export const example_02 = () => rustToWGSL(rust);
 
