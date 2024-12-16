@@ -18,6 +18,8 @@ const topToWGSL = (rust) => {
                 case 'let':
                     wgsl.push('var');
                     break;
+                default: // not a recognised keyword
+                    wgsl.push(token);
             }
             token = [];
             wgsl.push(char);
@@ -42,6 +44,7 @@ export const rustToWGSL = (rust) => {
             case 'TOP':
                 wgsl.push(topToWGSL(rust));
                 break;
+            case 'BLOCK_COMMENT':
             case 'INLINE_COMMENT':
                 wgsl.push(rust.join(''));
                 break;

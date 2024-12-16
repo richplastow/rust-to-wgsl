@@ -10,7 +10,7 @@
 ## Examples
 
 1. `node examples/01.mjs` Inline and block comments
-2. `node examples/02.mjs` Simple variable assignment
+2. `node examples/02.mjs` Rust’s `let` is equivalent to WGSL’s `var`
 
 ## Unit tests
 
