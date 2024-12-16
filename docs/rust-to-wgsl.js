@@ -1,7 +1,7 @@
 var RUST_TO_WGSL = (function (exports) {
     'use strict';
 
-    const rustToThreeParts = (...rustLines) => {
+    const rustToBasicParts = (...rustLines) => {
         const parts = [{
             kind: 'TOP', // start at the top-level
             rust: [],
@@ -179,7 +179,7 @@ let e = "Not a /* block */ comment";
         const errors = [];
         const wgsl = [];
 
-        const rustParts = rustToThreeParts(rust);
+        const rustParts = rustToBasicParts(rust);
 
         for (const { depth, kind, pos, rust } of rustParts) {
             switch (kind) {

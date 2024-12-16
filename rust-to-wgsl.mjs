@@ -1,4 +1,4 @@
-import { rustToThreeParts } from './lib/rust-to-three-parts.mjs';
+import { rustToBasicParts } from './lib/rust-to-basic-parts.mjs';
 
 // Exports used by 'Rust to WGSL Playground' as presets.
 export { rust01 } from './examples/code-01.mjs'
@@ -44,7 +44,7 @@ export const rustToWGSL = (rust) => {
     const errors = [];
     const wgsl = [];
 
-    const rustParts = rustToThreeParts(rust);
+    const rustParts = rustToBasicParts(rust);
 
     for (const { depth, kind, pos, rust } of rustParts) {
         switch (kind) {
