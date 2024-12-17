@@ -2,8 +2,9 @@
 
 > Transforms Rust source code to WebGPU Shading Language (WGSL) source code
 
+- Version: 0.0.1
 - Created: 2024-12-15 by Rich Plastow
-- Last updated: 2024-12-16 by Rich Plastow
+- Last updated: 2024-12-17 by Rich Plastow
 - Playground: <https://richplastow.com/rust-to-wgsl/>
 - Repo: <https://github.com/richplastow/rust-to-wgsl>
 

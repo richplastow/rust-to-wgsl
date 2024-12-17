@@ -35,12 +35,31 @@ const topToWGSL = (rust) => {
     return wgsl.join('');
 }
 
+const validHighlight = new Set([ 'PLAIN', 'HTML' ]);
+
 /** #### Transforms Rust source code to WebGPU Shading Language (WGSL) source code
  * 
  * @param rust  Rust source code
+ * @param options  Configures the response
  * @returns  WGSL source code
  */
-export const rustToWGSL = (rust) => {
+export const rustToWGSL = (rust, options = {}) => {
+    const pfx = 'rustToWGSL(): Invalid'; // error prefix
+
+    // Validate argument types.
+    if (typeof rust !== 'string') throw RangeError(
+        `${pfx} rust argument type '${typeof rust}', should be 'string'`);
+    if (typeof options !== 'object') throw RangeError(
+        `${pfx} options type '${typeof options}', should be 'object', if present`);
+
+    // Validate `options`, and fall back to defaults.
+    let { highlight } = {
+        highlight: 'PLAIN',
+        ...options,
+    };
+    if (!validHighlight.has(highlight)) throw RangeError(
+        `${pfx} options.highlight '${highlight}', use 'PLAIN' or 'HTML'`);
+
     const errors = [];
     const wgsl = [];
 
@@ -52,7 +71,6 @@ export const rustToWGSL = (rust) => {
                 wgsl.push(topToWGSL(rust));
                 break;
             case 'BLOCK_COMMENT':
-                if (depth) errors.push('Unterminated block comment');
             case 'INLINE_COMMENT':
                 wgsl.push(rust.join(''));
                 break;
@@ -68,6 +86,9 @@ export const rustToWGSL = (rust) => {
     }
 
     switch (rustParts[rustParts.length-1].kind) {
+        case 'BLOCK_COMMENT':
+            errors.push('Unterminated block comment');
+            break;
         case 'CHAR_LITERAL':
             errors.push('Unterminated char literal');
             break;

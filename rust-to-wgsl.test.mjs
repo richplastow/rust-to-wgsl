@@ -1,9 +1,27 @@
-import { deepStrictEqual as deep } from 'assert';
+import { deepStrictEqual as deep, throws } from 'assert';
 import { rustToWGSL as fn } from './rust-to-wgsl.mjs';
 
 export const testRustToWGSL = () => {
+    const pfx = 'rustToWGSL(): Invalid'; // error prefix
+
+    throws(
+        () => fn(123),
+        new RangeError(pfx + " rust argument type 'number', should be 'string'"),
+        'Invalid `rust` argument type'
+    );
+    throws(
+        () => fn('', 123),
+        new RangeError(pfx + " options type 'number', should be 'object', if present"),
+        'Invalid `options` argument type'
+    );
+    throws(
+        () => fn('', { highlight: true }),
+        new RangeError(pfx + " options.highlight 'true', use 'PLAIN' or 'HTML'"),
+        'Invalid `options.highlight` value'
+    );
+
     deep(
-        fn(''),
+        fn('', null), // `options` can be null
         {
             errors: [],
             wgsl: '',
@@ -12,7 +30,7 @@ export const testRustToWGSL = () => {
     );
 
     deep(
-        fn('/*'),
+        fn('/*', void 0), // `options` can be undefined
         {
             errors: [ 'Unterminated block comment' ],
             wgsl: '/*',
