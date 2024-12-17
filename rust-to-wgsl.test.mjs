@@ -19,9 +19,14 @@ export const testRustToWGSL = () => {
         new RangeError(pfx + " options.highlight 'true', use 'PLAIN' or 'HTML'"),
         'Invalid `options.highlight` value'
     );
+    throws(
+        () => fn('', { classPrefix: {} }),
+        new RangeError(pfx + " options.classPrefix type 'object', should be 'string'"),
+        'Invalid `options.classPrefix` value'
+    );
 
     deep(
-        fn('', null), // `options` can be null
+        fn('', null), // `rust` can be an empty string, and `options` can be null
         {
             errors: [],
             wgsl: '',
@@ -48,6 +53,26 @@ export const testRustToWGSL = () => {
     );
 
     deep(
+        fn('start /* middle */ end', { highlight: 'HTML' }),
+        {
+            errors: [],
+            wgsl: '<span class="top">start </span><span class="comment">/* '
+                + 'middle */</span><span class="top"> end</span>',
+        },
+        'Typical block comment, with HTML highlighting'
+    );
+
+    deep(
+        fn('start // middle\nend', { classPrefix: 'wgsl-', highlight: 'HTML' }),
+        {
+            errors: [],
+            wgsl: '<span class="wgsl-top">start </span><span class="wgsl-comment">'
+                + '// middle<br />\n</span><span class="wgsl-top">end</span>',
+        },
+        'Typical inline comment, with class-prefix and HTML highlighting'
+    );
+
+    deep(
         fn("'"),
         {
             errors: [
@@ -57,6 +82,16 @@ export const testRustToWGSL = () => {
             wgsl: "'",
         },
         'Minimal unterminated char literal'
+    );
+
+    deep(
+        fn("start '<' end", { highlight: 'HTML' }), // '<' becomes '&lt;'
+        {
+            errors: [ 'Contains a char at pos 6' ],
+            wgsl: '<span class="top">start </span><span class="char-or-string">'
+                + `'&lt;'</span><span class="top"> end</span>`,
+        },
+        'Typical char literal, with HTML highlighting'
     );
 
     deep(
@@ -82,6 +117,17 @@ export const testRustToWGSL = () => {
             wgsl: 'start "ok string" " \\" end',
         },
         'Typical unterminated string literal'
+    );
+
+    deep(
+        fn('start "middle" end', { classPrefix: 'PREFIX', highlight: 'HTML' }),
+        {
+            errors: [ 'Contains a string at pos 6' ],
+            wgsl: '<span class="PREFIXtop">start </span><span '
+                + 'class="PREFIXchar-or-string">"middle"</span><span '
+                + 'class="PREFIXtop"> end</span>',
+        },
+        'Typical string literal, with class-prefix and HTML highlighting'
     );
 
     console.log('OK: All rustToWGSL() tests passed!');

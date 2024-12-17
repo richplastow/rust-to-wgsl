@@ -144,7 +144,23 @@ let e = "Not a /* block */ comment";
     const keywordChars = new Set(['l','e','t']);
     const isKeywordChar = (char) => keywordChars.has(char);
 
-    const topToWGSL = (rust) => {
+    const classNames = new Map();
+    classNames.set('TOP', 'top');
+    classNames.set('BLOCK_COMMENT', 'comment');
+    classNames.set('INLINE_COMMENT', 'comment');
+    classNames.set('CHAR_LITERAL', 'char-or-string');
+    classNames.set('STRING_LITERAL', 'char-or-string');
+
+    const highlightWGSL = (charArray, options, kind) => {
+        const str = charArray.join('');
+        const { classPrefix, highlight } = options;
+        if (highlight === 'PLAIN') return str;    
+        const className = `${classPrefix}${classNames.get(kind)}`;
+        const htmlStr = str.replace(/</g, '&lt;').replace(/\n/g, '<br />\n');
+        return `<span class="${className}">${htmlStr}</span>`;
+    };
+
+    const topToWGSL = (rust, options) => {
         const wgsl = [];
         let token = []; // characters building the current token
 
@@ -167,7 +183,8 @@ let e = "Not a /* block */ comment";
             }
         }
 
-        return wgsl.join('');
+        // TODO highlight numbers differently, etc
+        return highlightWGSL(wgsl, options, 'TOP');
     };
 
     const validHighlight = new Set([ 'PLAIN', 'HTML' ]);
@@ -188,10 +205,14 @@ let e = "Not a /* block */ comment";
             `${pfx} options type '${typeof options}', should be 'object', if present`);
 
         // Validate `options`, and fall back to defaults.
-        let { highlight } = {
+        const defaultedOptions = {
+            classPrefix: '',
             highlight: 'PLAIN',
             ...options,
         };
+        const { classPrefix, highlight } = defaultedOptions;
+        if (typeof classPrefix !== 'string') throw RangeError(
+            `${pfx} options.classPrefix type '${typeof classPrefix}', should be 'string'`);
         if (!validHighlight.has(highlight)) throw RangeError(
             `${pfx} options.highlight '${highlight}', use 'PLAIN' or 'HTML'`);
 
@@ -200,22 +221,22 @@ let e = "Not a /* block */ comment";
 
         const rustParts = rustToBasicParts(rust);
 
-        for (const { depth, kind, pos, rust } of rustParts) {
+        for (const { kind, pos, rust } of rustParts) {
             switch (kind) {
                 case 'TOP':
-                    wgsl.push(topToWGSL(rust));
+                    wgsl.push(topToWGSL(rust, defaultedOptions));
                     break;
                 case 'BLOCK_COMMENT':
                 case 'INLINE_COMMENT':
-                    wgsl.push(rust.join(''));
+                    wgsl.push(highlightWGSL(rust, defaultedOptions, kind));
                     break;
                 case 'CHAR_LITERAL':
                     errors.push(`Contains a char at pos ${pos}`);
-                    wgsl.push(rust.join(''));
+                    wgsl.push(highlightWGSL(rust, defaultedOptions, kind));
                     break;
                 case 'STRING_LITERAL':
                     errors.push(`Contains a string at pos ${pos}`);
-                    wgsl.push(rust.join(''));
+                    wgsl.push(highlightWGSL(rust, defaultedOptions, kind));
                     break;
             }
         }
