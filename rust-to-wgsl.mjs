@@ -1,41 +1,12 @@
 import { rustToBasicParts } from './lib/rust-to-basic-parts.mjs';
 import { highlightWGSL } from './lib/highlight-wgsl.mjs';
+import { topToWGSL } from './lib/top-to-wgsl.mjs';
 
 // Exports used by 'Rust to WGSL Playground' as presets.
 export { rust01 } from './examples/code-01.mjs'
 export { rust02 } from './examples/code-02.mjs'
 export { rust03 } from './examples/code-03.mjs'
 export { rust04 } from './examples/code-04.mjs'
-
-const keywordChars = new Set(['l','e','t']);
-const isKeywordChar = (char) => keywordChars.has(char);
-
-const topToWGSL = (rust, options) => {
-    const wgsl = [];
-    let token = []; // characters building the current token
-
-    for (let i=0; i<rust.length; i++) {
-        const char = rust[i];
-
-        if (isKeywordChar(char)) {
-            token.push(char);
-        } else {
-            token = token.join('');
-            switch (token) {
-                case 'let':
-                    wgsl.push('var');
-                    break;
-                default: // not a recognised keyword
-                    wgsl.push(token);
-            }
-            token = [];
-            wgsl.push(char);
-        }
-    }
-
-    // TODO highlight numbers differently, etc
-    return highlightWGSL(wgsl, options, 'TOP');
-}
 
 const validHighlight = new Set([ 'PLAIN', 'HTML' ]);
 
@@ -46,13 +17,13 @@ const validHighlight = new Set([ 'PLAIN', 'HTML' ]);
  * @returns  WGSL source code
  */
 export const rustToWGSL = (rust, options = {}) => {
-    const pfx = 'rustToWGSL(): Invalid'; // error prefix
+    const xpx = 'rustToWGSL(): Invalid'; // exception prefix
 
     // Validate argument types.
     if (typeof rust !== 'string') throw RangeError(
-        `${pfx} rust argument type '${typeof rust}', should be 'string'`);
+        `${xpx} rust argument type '${typeof rust}', should be 'string'`);
     if (typeof options !== 'object') throw RangeError(
-        `${pfx} options type '${typeof options}', should be 'object', if present`);
+        `${xpx} options type '${typeof options}', should be 'object', if present`);
 
     // Validate `options`, and fall back to defaults.
     const defaultedOptions = {
@@ -62,35 +33,37 @@ export const rustToWGSL = (rust, options = {}) => {
     };
     const { classPrefix, highlight } = defaultedOptions;
     if (typeof classPrefix !== 'string') throw RangeError(
-        `${pfx} options.classPrefix type '${typeof classPrefix}', should be 'string'`);
+        `${xpx} options.classPrefix type '${typeof classPrefix}', should be 'string'`);
     if (!validHighlight.has(highlight)) throw RangeError(
-        `${pfx} options.highlight '${highlight}', use 'PLAIN' or 'HTML'`);
+        `${xpx} options.highlight '${highlight}', use 'PLAIN' or 'HTML'`);
 
     const errors = [];
     const wgsl = [];
 
+    // Find comments, chars and strings in the raw Rust source code. Other code
+    // is lumped together and given the "TOP" kind.
     const rustParts = rustToBasicParts(rust);
 
     for (const { kind, pos, rust } of rustParts) {
-        switch (kind) {
-            case 'TOP':
-                wgsl.push(topToWGSL(rust, defaultedOptions));
-                break;
-            case 'BLOCK_COMMENT':
-            case 'INLINE_COMMENT':
-                wgsl.push(highlightWGSL(rust, defaultedOptions, kind));
-                break;
-            case 'CHAR_LITERAL':
-                errors.push(`Contains a char at pos ${pos}`);
-                wgsl.push(highlightWGSL(rust, defaultedOptions, kind));
-                break;
-            case 'STRING_LITERAL':
-                errors.push(`Contains a string at pos ${pos}`);
-                wgsl.push(highlightWGSL(rust, defaultedOptions, kind));
-                break;
+
+        // Comments, chars and strings can be sent for syntax highlighting
+        // straight away. Other code will need to be parsed and highlighted
+        // in more detail using topToWGSL().
+        if (kind === 'TOP') {
+            wgsl.push(topToWGSL(rust, defaultedOptions));
+        } else {
+            wgsl.push(highlightWGSL(rust, defaultedOptions, kind));
+        }
+
+        // Chars and strings are not allowed in WGSL, so add an error.
+        if (kind === 'CHAR_LITERAL') {
+            errors.push(`Contains a char at pos ${pos}`);
+        } else if (kind === 'STRING_LITERAL') {
+            errors.push(`Contains a string at pos ${pos}`);
         }
     }
 
+    // Add an error if a block comment, char or string was not ended correctly.
     switch (rustParts[rustParts.length-1].kind) {
         case 'BLOCK_COMMENT':
             errors.push('Unterminated block comment');

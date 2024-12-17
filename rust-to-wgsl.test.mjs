@@ -2,26 +2,26 @@ import { deepStrictEqual as deep, throws } from 'assert';
 import { rustToWGSL as fn } from './rust-to-wgsl.mjs';
 
 export const testRustToWGSL = () => {
-    const pfx = 'rustToWGSL(): Invalid'; // error prefix
+    const xpx = 'rustToWGSL(): Invalid'; // exception prefix
 
     throws(
         () => fn(123),
-        new RangeError(pfx + " rust argument type 'number', should be 'string'"),
+        new RangeError(xpx + " rust argument type 'number', should be 'string'"),
         'Invalid `rust` argument type'
     );
     throws(
         () => fn('', 123),
-        new RangeError(pfx + " options type 'number', should be 'object', if present"),
+        new RangeError(xpx + " options type 'number', should be 'object', if present"),
         'Invalid `options` argument type'
     );
     throws(
         () => fn('', { highlight: true }),
-        new RangeError(pfx + " options.highlight 'true', use 'PLAIN' or 'HTML'"),
+        new RangeError(xpx + " options.highlight 'true', use 'PLAIN' or 'HTML'"),
         'Invalid `options.highlight` value'
     );
     throws(
         () => fn('', { classPrefix: {} }),
-        new RangeError(pfx + " options.classPrefix type 'object', should be 'string'"),
+        new RangeError(xpx + " options.classPrefix type 'object', should be 'string'"),
         'Invalid `options.classPrefix` value'
     );
 
