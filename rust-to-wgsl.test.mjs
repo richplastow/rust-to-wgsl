@@ -67,7 +67,7 @@ export const testRustToWGSL = () => {
         {
             errors: [],
             wgsl: '<span class="wgsl-top">start </span><span class="wgsl-comment">'
-                + '// middle<br />\n</span><span class="wgsl-top">end</span>',
+                + '// middle</span><br /><span class="wgsl-top">end</span>',
         },
         'Typical inline comment, with class-prefix and HTML highlighting'
     );

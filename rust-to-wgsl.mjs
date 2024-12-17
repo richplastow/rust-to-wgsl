@@ -1,4 +1,5 @@
 import { rustToBasicParts } from './lib/rust-to-basic-parts.mjs';
+import { highlightWGSL } from './lib/highlight-wgsl.mjs';
 
 // Exports used by 'Rust to WGSL Playground' as presets.
 export { rust01 } from './examples/code-01.mjs'
@@ -8,22 +9,6 @@ export { rust04 } from './examples/code-04.mjs'
 
 const keywordChars = new Set(['l','e','t']);
 const isKeywordChar = (char) => keywordChars.has(char);
-
-const classNames = new Map();
-classNames.set('TOP', 'top');
-classNames.set('BLOCK_COMMENT', 'comment');
-classNames.set('INLINE_COMMENT', 'comment');
-classNames.set('CHAR_LITERAL', 'char-or-string');
-classNames.set('STRING_LITERAL', 'char-or-string');
-
-const highlightWGSL = (charArray, options, kind) => {
-    const str = charArray.join('');
-    const { classPrefix, highlight } = options;
-    if (highlight === 'PLAIN') return str;    
-    const className = `${classPrefix}${classNames.get(kind)}`;
-    const htmlStr = str.replace(/</g, '&lt;').replace(/\n/g, '<br />\n');
-    return `<span class="${className}">${htmlStr}</span>`;
-};
 
 const topToWGSL = (rust, options) => {
     const wgsl = [];

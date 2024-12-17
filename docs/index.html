@@ -77,6 +77,7 @@
     nav li a { background: #0d2266; color: #eee; }
     nav li a:hover { color: #fff; background: #00508d; }
     #input  { background: #0d2266; }
+    #output  { white-space: pre-wrap; } /* preserve multiple spaces */
     #output, #results { background: #333; transition: background 0.5s; }
     body.wgsl-errors #output, body.wgsl-errors #results { background: #422; }
     textarea, #output, pre { border: 0.5em solid #080808; color: #eee; }
@@ -87,9 +88,9 @@
       nav li a { background: #c0ccee; color: #111; }
       nav li a:hover { color: #000; background: #ccd8f8; }
       #input  { background: #c0ccee; }
-      #output { background: #ccc; }
+      #output, #results { background: #ccc; }
       body.wgsl-errors #output, body.wgsl-errors #results { background: #e0c8c8; }
-      textarea, pre { border: 0.5em solid #e8e8e8; color: #111; }
+      textarea, #output, pre { border: 0.5em solid #e8e8e8; color: #111; }
       .wgsl-char-or-string { color: #a00; }
       .wgsl-comment { color: #080; }
     }
