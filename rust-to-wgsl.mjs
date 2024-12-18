@@ -1,6 +1,6 @@
-import { rustToBasicParts } from './lib/rust-to-basic-parts.mjs';
+import { roughlyParseRust } from './lib/roughly-parse-rust.mjs';
 import { highlightWGSL } from './lib/highlight-wgsl.mjs';
-import { topToWGSL } from './lib/top-to-wgsl.mjs';
+import { transformParts } from './lib/transform-parts.mjs';
 
 // Exports used by 'Rust to WGSL Playground' as presets.
 export { rust01 } from './examples/code-01.mjs'
@@ -38,46 +38,42 @@ export const rustToWGSL = (rust, options = {}) => {
         `${xpx} options.highlight '${highlight}', use 'PLAIN' or 'HTML'`);
 
     const errors = [];
-    const wgsl = [];
 
-    // Find comments, chars and strings in the raw Rust source code. Other code
-    // is lumped together and given the "TOP" kind.
-    const rustParts = rustToBasicParts(rust);
+    // Divide the Rust source code into parts of different kinds, for example
+    // 'BLOCK_COMMENT', 'KEYWORD' and 'NUM_HEX'.
+    const {
+        errors: parseErrors,
+        parts: parsedParts
+    } = roughlyParseRust(rust);
+    errors.push(...parseErrors);
 
-    for (const { kind, pos, rust } of rustParts) {
+    const {
+        errors: transformationErrors,
+        parts: transformedParts
+    } = transformParts(parsedParts, defaultedOptions);
+    errors.push(...transformationErrors);
 
-        // Comments, chars and strings can be sent for syntax highlighting
-        // straight away. Other code will need to be parsed and highlighted
-        // in more detail using topToWGSL().
-        if (kind === 'TOP') {
-            wgsl.push(topToWGSL(rust, defaultedOptions));
-        } else {
-            wgsl.push(highlightWGSL(rust, defaultedOptions, kind));
-        }
-
-        // Chars and strings are not allowed in WGSL, so add an error.
-        if (kind === 'CHAR_LITERAL') {
-            errors.push(`Contains a char at pos ${pos}`);
-        } else if (kind === 'STRING_LITERAL') {
-            errors.push(`Contains a string at pos ${pos}`);
-        }
+    const wgslParts = [];
+    for (const { kind, wgsl } of transformedParts) {
+        wgslParts.push(highlightWGSL(wgsl, defaultedOptions, kind));
     }
 
     // Add an error if a block comment, char or string was not ended correctly.
-    switch (rustParts[rustParts.length-1].kind) {
-        case 'BLOCK_COMMENT':
-            errors.push('Unterminated block comment');
-            break;
-        case 'CHAR_LITERAL':
-            errors.push('Unterminated char literal');
-            break;
-        case 'STRING_LITERAL':
-            errors.push('Unterminated string literal');
-            break;
-    }
+    if (transformedParts.length)
+        switch (transformedParts.at(-1).kind) {
+            case 'BLOCK_COMMENT':
+                errors.push('Unterminated block comment');
+                break;
+            case 'CHAR_LITERAL':
+                errors.push('Unterminated char literal');
+                break;
+            case 'STRING_LITERAL':
+                errors.push('Unterminated string literal');
+                break;
+        }
 
     return {
         errors,
-        wgsl: wgsl.join(''),
+        wgsl: wgslParts.join(''),
     };
 }

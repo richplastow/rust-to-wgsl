@@ -56,8 +56,9 @@ export const testRustToWGSL = () => {
         fn('start /* middle */ end', { highlight: 'HTML' }),
         {
             errors: [],
-            wgsl: '<span class="top">start </span><span class="comment">/* '
-                + 'middle */</span><span class="top"> end</span>',
+            wgsl: '<span class="identifier">start</span><span class="whitespace"> '
+                + '</span><span class="comment">/* middle */</span><span '
+                + 'class="whitespace"> </span><span class="identifier">end</span>',
         },
         'Typical block comment, with HTML highlighting'
     );
@@ -66,8 +67,9 @@ export const testRustToWGSL = () => {
         fn('start // middle\nend', { classPrefix: 'wgsl-', highlight: 'HTML' }),
         {
             errors: [],
-            wgsl: '<span class="wgsl-top">start </span><span class="wgsl-comment">'
-                + '// middle</span><br /><span class="wgsl-top">end</span>',
+            wgsl: '<span class="wgsl-identifier">start</span><span '
+                + 'class="wgsl-whitespace"> </span><span class="wgsl-comment">'
+                + '// middle</span><br /><span class="wgsl-identifier">end</span>',
         },
         'Typical inline comment, with class-prefix and HTML highlighting'
     );
@@ -88,8 +90,9 @@ export const testRustToWGSL = () => {
         fn("start '<' end", { highlight: 'HTML' }), // '<' becomes '&lt;'
         {
             errors: [ 'Contains a char at pos 6' ],
-            wgsl: '<span class="top">start </span><span class="char-or-string">'
-                + `'&lt;'</span><span class="top"> end</span>`,
+            wgsl: `<span class="identifier">start</span><span class="whitespace"> `
+                + `</span><span class="char-or-string">'&lt;'</span><span `
+                + `class="whitespace"> </span><span class="identifier">end</span>`,
         },
         'Typical char literal, with HTML highlighting'
     );
@@ -123,9 +126,11 @@ export const testRustToWGSL = () => {
         fn('start "middle" end', { classPrefix: 'PREFIX', highlight: 'HTML' }),
         {
             errors: [ 'Contains a string at pos 6' ],
-            wgsl: '<span class="PREFIXtop">start </span><span '
+            wgsl: '<span class="PREFIXidentifier">start</span><span '
+                + 'class="PREFIXwhitespace"> </span><span '
                 + 'class="PREFIXchar-or-string">"middle"</span><span '
-                + 'class="PREFIXtop"> end</span>',
+                + 'class="PREFIXwhitespace"> </span><span '
+                + 'class="PREFIXidentifier">end</span>',
         },
         'Typical string literal, with class-prefix and HTML highlighting'
     );

@@ -4,7 +4,7 @@
 
 - Version: 0.0.1
 - Created: 2024-12-15 by Rich Plastow
-- Last updated: 2024-12-17 by Rich Plastow
+- Last updated: 2024-12-18 by Rich Plastow
 - Playground: <https://richplastow.com/rust-to-wgsl/>
 - Repo: <https://github.com/richplastow/rust-to-wgsl>
 
@@ -23,7 +23,7 @@
 
 - <https://play.rust-lang.org/>
 - <https://shader-playground.timjones.io/> with Input format ‘WGSL’, Compiler #1
-  ‘Naga v0.19.3’, and Output format ‘WGSL’
+  ‘Tint’ ‘trunk’, Shader stage ‘\<all>’ and Output format ‘WGSL’
 
 ## Build
 
