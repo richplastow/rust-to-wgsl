@@ -58,20 +58,6 @@ export const rustToWGSL = (rust, options = {}) => {
         wgslParts.push(highlightWGSL(wgsl, defaultedOptions, kind));
     }
 
-    // Add an error if a block comment, char or string was not ended correctly.
-    if (transformedParts.length)
-        switch (transformedParts.at(-1).kind) {
-            case 'BLOCK_COMMENT':
-                errors.push('Unterminated block comment');
-                break;
-            case 'CHAR_LITERAL':
-                errors.push('Unterminated char literal');
-                break;
-            case 'STRING_LITERAL':
-                errors.push('Unterminated string literal');
-                break;
-        }
-
     return {
         errors,
         wgsl: wgslParts.join(''),

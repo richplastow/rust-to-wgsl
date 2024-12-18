@@ -44,6 +44,15 @@ export const testRustToWGSL = () => {
     );
 
     deep(
+        fn('/**/'),
+        {
+            errors: [],
+            wgsl: '/**/',
+        },
+        'Minimal correctly terminated block comment'
+    );
+
+    deep(
         fn('start /* ok */ mid /* outer /* inner */ end'),
         {
             errors: [ 'Unterminated block comment' ],
