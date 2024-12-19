@@ -3,9 +3,9 @@ import { testExample02 } from './examples/run-02.mjs';
 import { testExample03 } from './examples/run-03.mjs';
 import { testExample04 } from './examples/run-04.mjs';
 
-import { testHighlightWGSL } from './lib/highlight-wgsl.test.mjs';
-import { testRoughlyParseRust } from './lib/roughly-parse-rust.test.mjs';
-import { testTransformParts } from './lib/transform-parts.test.mjs';
+import { testHighlightWGSL } from './lib/highlight-wgsl/highlight-wgsl.test.mjs';
+import { testRoughlyParseRust } from './lib/roughly-parse-rust/roughly-parse-rust.test.mjs';
+import { testTransformParts } from './lib/transform-parts/transform-parts.test.mjs';
 
 import { testRustToWGSL } from './rust-to-wgsl.test.mjs';
 

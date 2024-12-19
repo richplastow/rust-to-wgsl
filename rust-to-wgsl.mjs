@@ -1,6 +1,6 @@
-import { highlightWGSL } from './lib/highlight-wgsl.mjs';
-import { roughlyParseRust } from './lib/roughly-parse-rust.mjs';
-import { transformParts } from './lib/transform-parts.mjs';
+import { highlightWGSL } from './lib/highlight-wgsl/highlight-wgsl.mjs';
+import { roughlyParseRust } from './lib/roughly-parse-rust/roughly-parse-rust.mjs';
+import { transformParts } from './lib/transform-parts/transform-parts.mjs';
 
 // Exports used by 'Rust to WGSL Playground' as presets.
 export { rust01 } from './examples/code-01.mjs'

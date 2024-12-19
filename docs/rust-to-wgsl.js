@@ -16,7 +16,7 @@ var RUST_TO_WGSL = (function (exports) {
     classNames.set('TYPE_BOTH', 'type-both');
     classNames.set('TYPE_RUST', 'type-rust');
     classNames.set('TYPE_WGSL', 'type-wgsl');
-    classNames.set('WS', 'whitespace');
+    classNames.set('WHITESPACE', 'whitespace');
 
     /** #### Adds syntax highlighting to WGSL source code
      * 
@@ -209,7 +209,7 @@ var RUST_TO_WGSL = (function (exports) {
     const roughlyParseRust = (rust) => {
         const errors = [];
         const parts = [{
-            kind: 'WS', // start with zero or more whitespace characters
+            kind: 'WHITESPACE', // start with zero or more whitespace characters
             rust: [],
         }];
         let partRef = parts[0];
@@ -223,8 +223,8 @@ var RUST_TO_WGSL = (function (exports) {
             const c1 = rustPlusNull[pos+1]; // possibly undefined
 
             switch (partRef.kind) {
-                case 'WS':
-                    if (c0 === ' ' || c0 === '\t' || c0 === '\n') { // WS
+                case 'WHITESPACE':
+                    if (c0 === ' ' || c0 === '\t' || c0 === '\n') { // WHITESPACE
                         partRef.rust.push(c0); // more whitespace
                     } else if (c0 >= '0' && c0 <= '9') { // NUM_DECIMAL_INTEGER
                         partRef = {
@@ -274,7 +274,7 @@ var RUST_TO_WGSL = (function (exports) {
                         parts.push(partRef);
                     } else if (c0 === '{') { // BRACKET_CURLY_OPEN
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push({
@@ -283,7 +283,7 @@ var RUST_TO_WGSL = (function (exports) {
                         }, partRef);
                     } else if (c0 === ';') { // SEMICOLON
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push({
@@ -313,7 +313,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture the 'i' or 'u'
                             partRef = {
-                                kind: 'WS',
+                                kind: 'WHITESPACE',
                                 rust: [],
                             };
                             parts.push(partRef);    
@@ -323,14 +323,14 @@ var RUST_TO_WGSL = (function (exports) {
                         partRef.kind = 'NUM_DECIMAL_INTEGER';
                         partRef.rust = ['0'];
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);    
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -347,14 +347,14 @@ var RUST_TO_WGSL = (function (exports) {
                             pos -= 1; // step back one place, to recapture the 'f'
                         }
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);    
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -375,7 +375,7 @@ var RUST_TO_WGSL = (function (exports) {
                             pos -= 1; // step back one place, to recapture the 'f'
                         }
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);    
@@ -395,7 +395,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture the 'i' or 'u'
                             partRef = {
-                                kind: 'WS',
+                                kind: 'WHITESPACE',
                                 rust: [],
                             };
                             parts.push(partRef);    
@@ -413,7 +413,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture c0
                             partRef = {
-                                kind: 'WS',
+                                kind: 'WHITESPACE',
                                 rust: [],
                             };
                             parts.push(partRef);
@@ -421,7 +421,7 @@ var RUST_TO_WGSL = (function (exports) {
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -446,7 +446,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture the 'i' or 'u'
                             partRef = {
-                                kind: 'WS',
+                                kind: 'WHITESPACE',
                                 rust: [],
                             };
                             parts.push(partRef);    
@@ -456,14 +456,14 @@ var RUST_TO_WGSL = (function (exports) {
                         partRef.kind = 'NUM_DECIMAL_INTEGER';
                         partRef.rust = ['0'];
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);    
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -488,7 +488,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture the 'i' or 'u'
                             partRef = {
-                                kind: 'WS',
+                                kind: 'WHITESPACE',
                                 rust: [],
                             };
                             parts.push(partRef);    
@@ -498,14 +498,14 @@ var RUST_TO_WGSL = (function (exports) {
                         partRef.kind = 'NUM_DECIMAL_INTEGER';
                         partRef.rust = ['0'];
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -528,7 +528,7 @@ var RUST_TO_WGSL = (function (exports) {
                         }
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -546,7 +546,7 @@ var RUST_TO_WGSL = (function (exports) {
                         if (partRef.depth === 0) {
                             delete partRef.depth;
                             partRef = {
-                                kind: 'WS',
+                                kind: 'WHITESPACE',
                                 rust: [],
                             };
                             parts.push(partRef);
@@ -559,7 +559,7 @@ var RUST_TO_WGSL = (function (exports) {
                     partRef.rust.push(c0);
                     if (c0 === '\n') {
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -569,7 +569,7 @@ var RUST_TO_WGSL = (function (exports) {
                     partRef.rust.push(c0);
                     if (c0 === "'") {
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -585,7 +585,7 @@ var RUST_TO_WGSL = (function (exports) {
                         partRef.rust.push(c1);
                     } else if (c0 === '"') {
                         partRef = {
-                            kind: 'WS',
+                            kind: 'WHITESPACE',
                             rust: [],
                         };
                         parts.push(partRef);
