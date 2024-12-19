@@ -65,9 +65,9 @@ export const testRustToWGSL = () => {
         fn('start /* middle */ end', { highlight: 'HTML' }),
         {
             errors: [],
-            wgsl: '<span class="unidentified">start</span><span class="whitespace"> '
+            wgsl: '<span class="unidentified">start</span><span class="whitespace-most"> '
                 + '</span><span class="comment">/* middle */</span><span '
-                + 'class="whitespace"> </span><span class="unidentified">end</span>',
+                + 'class="whitespace-most"> </span><span class="unidentified">end</span>',
         },
         'Typical block comment, with HTML highlighting'
     );
@@ -77,7 +77,7 @@ export const testRustToWGSL = () => {
         {
             errors: [],
             wgsl: '<span class="wgsl-unidentified">start</span><span '
-                + 'class="wgsl-whitespace"> </span><span class="wgsl-comment">'
+                + 'class="wgsl-whitespace-most"> </span><span class="wgsl-comment">'
                 + '// middle</span><br /><span class="wgsl-unidentified">end</span>',
         },
         'Typical inline comment, with class-prefix and HTML highlighting'
@@ -99,9 +99,9 @@ export const testRustToWGSL = () => {
         fn("start '<' end", { highlight: 'HTML' }), // '<' becomes '&lt;'
         {
             errors: [ 'Contains a char at pos 6' ],
-            wgsl: `<span class="unidentified">start</span><span class="whitespace"> `
+            wgsl: `<span class="unidentified">start</span><span class="whitespace-most"> `
                 + `</span><span class="char-or-string">'&lt;'</span><span `
-                + `class="whitespace"> </span><span class="unidentified">end</span>`,
+                + `class="whitespace-most"> </span><span class="unidentified">end</span>`,
         },
         'Typical char literal, with HTML highlighting'
     );
@@ -136,9 +136,9 @@ export const testRustToWGSL = () => {
         {
             errors: [ 'Contains a string at pos 6' ],
             wgsl: '<span class="PREFIXunidentified">start</span><span '
-                + 'class="PREFIXwhitespace"> </span><span '
+                + 'class="PREFIXwhitespace-most"> </span><span '
                 + 'class="PREFIXchar-or-string">"middle"</span><span '
-                + 'class="PREFIXwhitespace"> </span><span '
+                + 'class="PREFIXwhitespace-most"> </span><span '
                 + 'class="PREFIXunidentified">end</span>',
         },
         'Typical string literal, with class-prefix and HTML highlighting'

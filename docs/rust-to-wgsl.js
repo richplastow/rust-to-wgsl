@@ -4,7 +4,6 @@ var RUST_TO_WGSL = (function (exports) {
     const classNames = new Map();
     classNames.set('BLOCK_COMMENT', 'comment');
     classNames.set('CHAR_LITERAL', 'char-or-string');
-    classNames.set('UNIDENTIFIED', 'unidentified');
     classNames.set('INLINE_COMMENT', 'comment');
     classNames.set('KEYWORD', 'keyword');
     classNames.set('NUM_BINARY', 'number');
@@ -16,7 +15,9 @@ var RUST_TO_WGSL = (function (exports) {
     classNames.set('TYPE_BOTH', 'type-both');
     classNames.set('TYPE_RUST', 'type-rust');
     classNames.set('TYPE_WGSL', 'type-wgsl');
-    classNames.set('WHITESPACE', 'whitespace');
+    classNames.set('UNIDENTIFIED', 'unidentified');
+    classNames.set('WHITESPACE_MOST', 'whitespace-most');
+    classNames.set('WHITESPACE_RARE', 'whitespace-rare');
 
     /** #### Adds syntax highlighting to WGSL source code
      * 
@@ -46,6 +47,25 @@ var RUST_TO_WGSL = (function (exports) {
         const trailingNLsHTML = '<br />'.repeat(trailingNLs);
         return `<span class="${className}">${htmlStr}</span>${trailingNLsHTML}`;
     };
+
+    // Set of the most commonly encountered Pattern_White_Space characters.
+    const whitespaceMostChars = new Set([
+        '\t',    // U+0009 (horizontal tab)
+        '\n',    // U+000A (line feed, aka newline)
+        ' ',     // U+0020 (space)
+    ]);
+
+    /** #### Detects the most commonly encountered ‘Pattern_White_Space’ characters
+     * 
+     * These can be passed directly to WGSL without any transformation or special
+     * syntax highlighting.
+     * 
+     * @todo maybe a simple conditional would be more performant?
+     * 
+     * @param {string} char  A single character
+     * @returns {boolean}  `true` if the character is a space, tab or newline
+     */
+    const isWhitespaceMost = (char) => whitespaceMostChars.has(char);
 
     const rustKeywords = new Set([
         'abstract',
@@ -209,7 +229,7 @@ var RUST_TO_WGSL = (function (exports) {
     const roughlyParseRust = (rust) => {
         const errors = [];
         const parts = [{
-            kind: 'WHITESPACE', // start with zero or more whitespace characters
+            kind: 'WHITESPACE_MOST', // start with zero or more whitespace characters
             rust: [],
         }];
         let partRef = parts[0];
@@ -223,9 +243,9 @@ var RUST_TO_WGSL = (function (exports) {
             const c1 = rustPlusNull[pos+1]; // possibly undefined
 
             switch (partRef.kind) {
-                case 'WHITESPACE':
-                    if (c0 === ' ' || c0 === '\t' || c0 === '\n') { // WHITESPACE
-                        partRef.rust.push(c0); // more whitespace
+                case 'WHITESPACE_MOST':
+                    if (isWhitespaceMost(c0)) { // WHITESPACE_MORE
+                        partRef.rust.push(c0); // more spaces, tabs or newlines
                     } else if (c0 >= '0' && c0 <= '9') { // NUM_DECIMAL_INTEGER
                         partRef = {
                             kind: 'NUM_DECIMAL_INTEGER', // but may change, depending on what comes next
@@ -274,7 +294,7 @@ var RUST_TO_WGSL = (function (exports) {
                         parts.push(partRef);
                     } else if (c0 === '{') { // BRACKET_CURLY_OPEN
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push({
@@ -283,7 +303,7 @@ var RUST_TO_WGSL = (function (exports) {
                         }, partRef);
                     } else if (c0 === ';') { // SEMICOLON
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push({
@@ -313,7 +333,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture the 'i' or 'u'
                             partRef = {
-                                kind: 'WHITESPACE',
+                                kind: 'WHITESPACE_MOST',
                                 rust: [],
                             };
                             parts.push(partRef);    
@@ -323,14 +343,14 @@ var RUST_TO_WGSL = (function (exports) {
                         partRef.kind = 'NUM_DECIMAL_INTEGER';
                         partRef.rust = ['0'];
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);    
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -347,14 +367,14 @@ var RUST_TO_WGSL = (function (exports) {
                             pos -= 1; // step back one place, to recapture the 'f'
                         }
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);    
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -375,7 +395,7 @@ var RUST_TO_WGSL = (function (exports) {
                             pos -= 1; // step back one place, to recapture the 'f'
                         }
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);    
@@ -395,7 +415,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture the 'i' or 'u'
                             partRef = {
-                                kind: 'WHITESPACE',
+                                kind: 'WHITESPACE_MOST',
                                 rust: [],
                             };
                             parts.push(partRef);    
@@ -413,7 +433,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture c0
                             partRef = {
-                                kind: 'WHITESPACE',
+                                kind: 'WHITESPACE_MOST',
                                 rust: [],
                             };
                             parts.push(partRef);
@@ -421,7 +441,7 @@ var RUST_TO_WGSL = (function (exports) {
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -446,7 +466,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture the 'i' or 'u'
                             partRef = {
-                                kind: 'WHITESPACE',
+                                kind: 'WHITESPACE_MOST',
                                 rust: [],
                             };
                             parts.push(partRef);    
@@ -456,14 +476,14 @@ var RUST_TO_WGSL = (function (exports) {
                         partRef.kind = 'NUM_DECIMAL_INTEGER';
                         partRef.rust = ['0'];
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);    
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -488,7 +508,7 @@ var RUST_TO_WGSL = (function (exports) {
                         } else {
                             pos -= 1; // step back one place, to recapture the 'i' or 'u'
                             partRef = {
-                                kind: 'WHITESPACE',
+                                kind: 'WHITESPACE_MOST',
                                 rust: [],
                             };
                             parts.push(partRef);    
@@ -498,14 +518,14 @@ var RUST_TO_WGSL = (function (exports) {
                         partRef.kind = 'NUM_DECIMAL_INTEGER';
                         partRef.rust = ['0'];
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
                     } else {
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -528,7 +548,7 @@ var RUST_TO_WGSL = (function (exports) {
                         }
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -546,7 +566,7 @@ var RUST_TO_WGSL = (function (exports) {
                         if (partRef.depth === 0) {
                             delete partRef.depth;
                             partRef = {
-                                kind: 'WHITESPACE',
+                                kind: 'WHITESPACE_MOST',
                                 rust: [],
                             };
                             parts.push(partRef);
@@ -559,7 +579,7 @@ var RUST_TO_WGSL = (function (exports) {
                     partRef.rust.push(c0);
                     if (c0 === '\n') {
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -569,7 +589,7 @@ var RUST_TO_WGSL = (function (exports) {
                     partRef.rust.push(c0);
                     if (c0 === "'") {
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -585,7 +605,7 @@ var RUST_TO_WGSL = (function (exports) {
                         partRef.rust.push(c1);
                     } else if (c0 === '"') {
                         partRef = {
-                            kind: 'WHITESPACE',
+                            kind: 'WHITESPACE_MOST',
                             rust: [],
                         };
                         parts.push(partRef);
@@ -610,7 +630,7 @@ var RUST_TO_WGSL = (function (exports) {
                 break;
         }
 
-        // Remove and any empty parts (expected to just be unnecessary WHITESPACE).
+        // Remove and any empty parts (expected to just be unnecessary whitespace).
         return {
             errors,
             parts: parts.filter(({ rust }) => rust.length),
