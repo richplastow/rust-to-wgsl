@@ -55,6 +55,19 @@ var RUST_TO_WGSL = (function (exports) {
         ' ',     // U+0020 (space)
     ]);
 
+    // Set of the less common Pattern_White_Space characters, which Rust treats the
+    // same as space, tab and newline.
+    const whitespaceRareChars = new Set([
+        '\u000B',// U+000B (vertical tab)
+        '\u000C',// U+000C (form feed)
+        '\r',    // U+000D (carriage return)
+        '\u0085',// U+0085 (next line)
+        '\u200E',// U+200E (left-to-right mark)
+        '\u200F',// U+200F (right-to-left mark)
+        '\u2028',// U+2028 (line separator)
+        '\u2029' // U+2029 (paragraph separator)
+    ]);
+
     /** #### Detects the most commonly encountered ‘Pattern_White_Space’ characters
      * 
      * These can be passed directly to WGSL without any transformation or special
@@ -66,6 +79,16 @@ var RUST_TO_WGSL = (function (exports) {
      * @returns {boolean}  `true` if the character is a space, tab or newline
      */
     const isWhitespaceMost = (char) => whitespaceMostChars.has(char);
+
+    /** #### Detects the less commonly encountered ‘Pattern_White_Space’ characters
+     * 
+     * Although these can be passed directly to WGSL without any transformation,
+     * special syntax highlighting may be useful.
+     * 
+     * @param {string} char  A single character
+     * @returns {boolean}  `true` if the character is a rare whitespace character
+     */
+    const isWhitespaceRare = (char) => whitespaceRareChars.has(char);
 
     const rustKeywords = new Set([
         'abstract',
@@ -310,10 +333,27 @@ var RUST_TO_WGSL = (function (exports) {
                             kind: 'SEMICOLON',
                             rust: [c0],
                         }, partRef);
+                    } else if (isWhitespaceRare(c0)) { // WHITESPACE_RARE
+                        partRef = {
+                            kind: 'WHITESPACE_RARE',
+                            rust: [c0],
+                        };
+                        parts.push(partRef);
                     } else {
                         partRef.rust.push(c0);
                     }
                     break;
+                case 'WHITESPACE_RARE':
+                    if (isWhitespaceRare(c0)) { // WHITESPACE_RARE
+                        partRef.rust.push(c0); // more unusual chars from ‘Pattern_White_Space’
+                    } else {
+                        pos -= 1; // step back one place, to recapture c0
+                        partRef = {
+                            kind: 'WHITESPACE_MOST',
+                            rust: [],
+                        };
+                        parts.push(partRef);
+                    }
                 case 'NUM_BINARY':
                     if (c0 === '0' || c0 === '1' || c0 === '_') {
                         partRef.rust.push(c0); // another character in the binary integer
