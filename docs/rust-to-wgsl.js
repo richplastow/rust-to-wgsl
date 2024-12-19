@@ -467,7 +467,20 @@ var RUST_TO_WGSL = (function (exports) {
         }
 
         // Remove the trailing `NULL`.
-        parts.at(-1).rust = parts.at(-1).rust.slice(0, -1);
+        partRef.rust = partRef.rust.slice(0, -1);
+
+        // Add an error if a block comment, char or string was not ended correctly.
+        switch (partRef.kind) {
+            case 'BLOCK_COMMENT':
+                errors.push('Unterminated block comment');
+                break;
+            case 'CHAR_LITERAL':
+                errors.push('Unterminated char literal');
+                break;
+            case 'STRING_LITERAL':
+                errors.push('Unterminated string literal');
+                break;
+        }
 
         // Remove and any empty parts (expected to just be unnecessary WHITESPACE).
         return {
@@ -495,11 +508,11 @@ var RUST_TO_WGSL = (function (exports) {
     /** #### Adds syntax highlighting to WGSL source code
      * 
      * @param {string} wgsl  The WGSL source code, as an array of characters
-     * @param {object} options  A validated `options` argument, with all fallbacks
      * @param {string} kind  'BLOCK_COMMENT', 'STRING_LITERAL', etc
+     * @param {object} options  A validated `options` argument, with all fallbacks
      * @returns {string}  The WGSL source code as a string, highlighted appropriately
      */
-    const highlightWGSL = (wgsl, options, kind) => {
+    const highlightWGSL = (wgsl, kind, options) => {
         const { classPrefix, highlight } = options;
 
         // Plain text can be returned immediately.
@@ -640,20 +653,6 @@ let e = "Not a /* block */ comment";
         for (const { kind, wgsl } of transformedParts) {
             wgslParts.push(highlightWGSL(wgsl, defaultedOptions, kind));
         }
-
-        // Add an error if a block comment, char or string was not ended correctly.
-        if (transformedParts.length)
-            switch (transformedParts.at(-1).kind) {
-                case 'BLOCK_COMMENT':
-                    errors.push('Unterminated block comment');
-                    break;
-                case 'CHAR_LITERAL':
-                    errors.push('Unterminated char literal');
-                    break;
-                case 'STRING_LITERAL':
-                    errors.push('Unterminated string literal');
-                    break;
-            }
 
         return {
             errors,

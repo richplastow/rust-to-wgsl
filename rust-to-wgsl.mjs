@@ -1,5 +1,5 @@
-import { roughlyParseRust } from './lib/roughly-parse-rust.mjs';
 import { highlightWGSL } from './lib/highlight-wgsl.mjs';
+import { roughlyParseRust } from './lib/roughly-parse-rust.mjs';
 import { transformParts } from './lib/transform-parts.mjs';
 
 // Exports used by 'Rust to WGSL Playground' as presets.
@@ -12,9 +12,9 @@ const validHighlight = new Set([ 'PLAIN', 'HTML' ]);
 
 /** #### Transforms Rust source code to WebGPU Shading Language (WGSL) source code
  * 
- * @param rust  Rust source code
- * @param options  Configures the response
- * @returns  WGSL source code
+ * @param {string} rust  Rust source code
+ * @param {object} [options={}]  Configures the response
+ * @returns  WGSL source code, along with an array of error messages
  */
 export const rustToWGSL = (rust, options = {}) => {
     const xpx = 'rustToWGSL(): Invalid'; // exception prefix
@@ -55,7 +55,7 @@ export const rustToWGSL = (rust, options = {}) => {
 
     const wgslParts = [];
     for (const { kind, wgsl } of transformedParts) {
-        wgslParts.push(highlightWGSL(wgsl, defaultedOptions, kind));
+        wgslParts.push(highlightWGSL(wgsl, kind, defaultedOptions));
     }
 
     return {

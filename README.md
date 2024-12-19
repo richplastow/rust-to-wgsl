@@ -4,7 +4,7 @@
 
 - Version: 0.0.1
 - Created: 2024-12-15 by Rich Plastow
-- Last updated: 2024-12-18 by Rich Plastow
+- Last updated: 2024-12-19 by Rich Plastow
 - Playground: <https://richplastow.com/rust-to-wgsl/>
 - Repo: <https://github.com/richplastow/rust-to-wgsl>
 
