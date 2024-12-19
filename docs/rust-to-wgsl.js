@@ -1,6 +1,52 @@
 var RUST_TO_WGSL = (function (exports) {
     'use strict';
 
+    const classNames = new Map();
+    classNames.set('BLOCK_COMMENT', 'comment');
+    classNames.set('CHAR_LITERAL', 'char-or-string');
+    classNames.set('UNIDENTIFIED', 'unidentified');
+    classNames.set('INLINE_COMMENT', 'comment');
+    classNames.set('KEYWORD', 'keyword');
+    classNames.set('NUM_BINARY', 'number');
+    classNames.set('NUM_DECIMAL_FLOAT', 'number');
+    classNames.set('NUM_DECIMAL_INTEGER', 'number');
+    classNames.set('NUM_HEX', 'number');
+    classNames.set('NUM_OCTAL', 'number');
+    classNames.set('STRING_LITERAL', 'char-or-string');
+    classNames.set('TYPE_BOTH', 'type-both');
+    classNames.set('TYPE_RUST', 'type-rust');
+    classNames.set('TYPE_WGSL', 'type-wgsl');
+    classNames.set('WS', 'whitespace');
+
+    /** #### Adds syntax highlighting to WGSL source code
+     * 
+     * @param {string} wgsl  The WGSL source code, as an array of characters
+     * @param {string} kind  'BLOCK_COMMENT', 'STRING_LITERAL', etc
+     * @param {object} options  A validated `options` argument, with all fallbacks
+     * @returns {string}  The WGSL source code as a string, highlighted appropriately
+     */
+    const highlightWGSL = (wgsl, kind, options) => {
+        const { classPrefix, highlight } = options;
+
+        // Plain text can be returned immediately.
+        if (highlight === 'PLAIN') return wgsl;
+
+        // If the last characters are newlines, it’s better to place the "<br />"
+        // code after the closing `</span>` tag, not before it.
+        let trailingNLs = 0;
+        for (let i=wgsl.length-1; i>=0; i--) {
+            if (wgsl[i] !== '\n') break; // found the last non-newline character
+            trailingNLs++;
+        }
+        const wgslTrimmed = trailingNLs ? wgsl.slice(0, -trailingNLs) : wgsl;
+
+        // Add syntax highlighting for HTML. Note, ANSI may be supported in future.
+        const className = `${classPrefix}${classNames.get(kind)}`;
+        const htmlStr = wgslTrimmed.replace(/</g, '&lt;').replace(/\n/g, '<br />');
+        const trailingNLsHTML = '<br />'.repeat(trailingNLs);
+        return `<span class="${className}">${htmlStr}</span>${trailingNLsHTML}`;
+    };
+
     const rustKeywords = new Set([
         'abstract',
         'as',
@@ -58,28 +104,106 @@ var RUST_TO_WGSL = (function (exports) {
         "'static", // TODO `c0 >= 'a' && c0 <= 'z'` misses this
     ]);
 
+    const bothTypes = new Set([
+        'bool', // a true or false value (no storage representation specified)
+        'f32',  // an IEEE-754 binary32 floating point
+        'i32',  // a signed, two’s complement, 32-bit integer
+        'u32',  // an unsigned 32-bit integer
+    ]);
+
     const rustTypes = new Set([
-        'bool',
+        'bool', // both - a true or false value (no storage representation specified)
         'char',
         'str',
         'String',
         'Vec',
         'Option',
         'Box',
-        'f32',
+        'f32', // both - an IEEE-754 binary32 floating point
         'f64',
         'i8',
         'i16',
-        'i32',
+        'i32', // both - a signed, two’s complement, 32-bit integer
         'i64',
         'i128',
         'isize',
         'u8',
         'u16',
-        'u32',
+        'u32', // both - an unsigned 32-bit integer
         'u64',
         'u128',
         'usize',
+    ]);
+
+    const wgslTypes = new Set([
+        // array<> types are very varied, so can’t just be looked up
+        'atomic<i32>',
+        'atomic<u32>',
+        'bool', //       both - a true or false value (no storage representation specified)
+        'f16',  // 1.0h  an IEEE-754 binary16 floating point (if extension enabled)
+        'f32',  // 1.0f  both - an IEEE-754 binary32 floating point
+        'i32',  // 1i    both - a signed, two’s complement, 32-bit integer
+        'mat2x2f',
+        'mat2x3f',
+        'mat2x4f',
+        'mat3x2f',
+        'mat3x3f',
+        'mat3x4f',
+        'mat4x2f',
+        'mat4x3f',
+        'mat4x4f',
+        'mat2x2h', // if f16 extension enabled
+        'mat2x3h', // if f16 extension enabled
+        'mat2x4h', // if f16 extension enabled
+        'mat3x2h', // if f16 extension enabled
+        'mat3x3h', // if f16 extension enabled
+        'mat3x4h', // if f16 extension enabled
+        'mat4x2h', // if f16 extension enabled
+        'mat4x3h', // if f16 extension enabled
+        'mat4x4h', // if f16 extension enabled
+        'mat2x2<f32>',
+        'mat2x3<f32>',
+        'mat2x4<f32>',
+        'mat3x2<f32>',
+        'mat3x3<f32>',
+        'mat3x4<f32>',
+        'mat4x2<f32>',
+        'mat4x3<f32>',
+        'mat4x4<f32>',
+        'mat2x2<f16>', // if f16 extension enabled
+        'mat2x3<f16>', // if f16 extension enabled
+        'mat2x4<f16>', // if f16 extension enabled
+        'mat3x2<f16>', // if f16 extension enabled
+        'mat3x3<f16>', // if f16 extension enabled
+        'mat3x4<f16>', // if f16 extension enabled
+        'mat4x2<f16>', // if f16 extension enabled
+        'mat4x3<f16>', // if f16 extension enabled
+        'mat4x4<f16>', // if f16 extension enabled
+        'u32', // 1u     both - an unsigned 32-bit integer
+        'vec2<f16>', // if f16 extension enabled
+        'vec2<f32>',
+        'vec2<i32>',
+        'vec2<u32>',
+        'vec2f',
+        'vec2h', // if f16 extension enabled
+        'vec2i',
+        'vec2u',
+        'vec3<f16>', // if f16 extension enabled
+        'vec3<f32>',
+        'vec3<i32>',
+        'vec3<u32>',
+        'vec3f',
+        'vec3h', // if f16 extension enabled
+        'vec3i',
+        'vec3u',
+        'vec4<f16>', // if f16 extension enabled
+        'vec4<f32>',
+        'vec4<i32>',
+        'vec4<u32>',
+        'vec4f',
+        'vec4h', // if f16 extension enabled
+        'vec4i',
+        'vec4u',
     ]);
 
     const roughlyParseRust = (rust) => {
@@ -112,7 +236,7 @@ var RUST_TO_WGSL = (function (exports) {
                     } else if (c0 === '_' || (c0 >= 'a' && c0 <= 'z') || (c0 >= 'A' && c0 <= 'Z')) { // IDENTIFIER
                         // TODO full XID_Start set
                         partRef = {
-                            kind: 'IDENTIFIER',
+                            kind: 'UNIDENTIFIED',
                             pos, // used for error message TODO remove if not used
                             rust: [c0],
                         };
@@ -387,16 +511,20 @@ var RUST_TO_WGSL = (function (exports) {
                         parts.push(partRef);
                     }
                     break;
-                case 'IDENTIFIER':
+                case 'UNIDENTIFIED':
                     // TODO full XID_Continue set
                     if (c0 === '_' || (c0 >= '0' && c0 <= '9') || (c0 >= 'a' && c0 <= 'z') || (c0 >= 'A' && c0 <= 'Z')) {
                         partRef.rust.push(c0); // another potential keyword character
                     } else {
-                        const identifier = partRef.rust.join('');
-                        if (rustKeywords.has(identifier)) {
+                        const unidentified = partRef.rust.join('');
+                        if (rustKeywords.has(unidentified)) {
                             partRef.kind = 'KEYWORD';
-                        } else if (rustTypes.has(identifier)) {
-                            partRef.kind = 'TYPE';
+                        } else if (bothTypes.has(unidentified)) {
+                            partRef.kind = 'TYPE_BOTH';
+                        } else if (rustTypes.has(unidentified)) {
+                            partRef.kind = 'TYPE_RUST';
+                        } else if (wgslTypes.has(unidentified)) {
+                            partRef.kind = 'TYPE_WGSL';
                         }
                         pos -= 1; // step back one place, to recapture c0
                         partRef = {
@@ -489,51 +617,6 @@ var RUST_TO_WGSL = (function (exports) {
         };
     };
 
-    const classNames = new Map();
-    classNames.set('BLOCK_COMMENT', 'comment');
-    classNames.set('CHAR_LITERAL', 'char-or-string');
-    classNames.set('IDENTIFIER', 'identifier');
-    classNames.set('INLINE_COMMENT', 'comment');
-    classNames.set('KEYWORD', 'keyword');
-    classNames.set('NUM_BINARY', 'number');
-    classNames.set('NUM_DECIMAL_FLOAT', 'number');
-    classNames.set('NUM_DECIMAL_INTEGER', 'number');
-    classNames.set('NUM_HEX', 'number');
-    classNames.set('NUM_OCTAL', 'number');
-    classNames.set('STRING_LITERAL', 'char-or-string');
-    classNames.set('TYPE', 'type');
-    classNames.set('WS', 'whitespace');
-
-
-    /** #### Adds syntax highlighting to WGSL source code
-     * 
-     * @param {string} wgsl  The WGSL source code, as an array of characters
-     * @param {string} kind  'BLOCK_COMMENT', 'STRING_LITERAL', etc
-     * @param {object} options  A validated `options` argument, with all fallbacks
-     * @returns {string}  The WGSL source code as a string, highlighted appropriately
-     */
-    const highlightWGSL = (wgsl, kind, options) => {
-        const { classPrefix, highlight } = options;
-
-        // Plain text can be returned immediately.
-        if (highlight === 'PLAIN') return wgsl;
-
-        // If the last characters are newlines, it’s better to place the "<br />"
-        // code after the closing `</span>` tag, not before it.
-        let trailingNLs = 0;
-        for (let i=wgsl.length-1; i>=0; i--) {
-            if (wgsl[i] !== '\n') break; // found the last non-newline character
-            trailingNLs++;
-        }
-        const wgslTrimmed = trailingNLs ? wgsl.slice(0, -trailingNLs) : wgsl;
-
-        // Add syntax highlighting for HTML. Note, ANSI may be supported in future.
-        const className = `${classPrefix}${classNames.get(kind)}`;
-        const htmlStr = wgslTrimmed.replace(/</g, '&lt;').replace(/\n/g, '<br />');
-        const trailingNLsHTML = '<br />'.repeat(trailingNLs);
-        return `<span class="${className}">${htmlStr}</span>${trailingNLsHTML}`;
-    };
-
     /** #### 
      * 
      * @param {*} parsedParts  
@@ -608,9 +691,9 @@ let e = "Not a /* block */ comment";
 
     /** #### Transforms Rust source code to WebGPU Shading Language (WGSL) source code
      * 
-     * @param rust  Rust source code
-     * @param options  Configures the response
-     * @returns  WGSL source code
+     * @param {string} rust  Rust source code
+     * @param {object} [options={}]  Configures the response
+     * @returns  WGSL source code, along with an array of error messages
      */
     const rustToWGSL = (rust, options = {}) => {
         const xpx = 'rustToWGSL(): Invalid'; // exception prefix
@@ -651,7 +734,7 @@ let e = "Not a /* block */ comment";
 
         const wgslParts = [];
         for (const { kind, wgsl } of transformedParts) {
-            wgslParts.push(highlightWGSL(wgsl, defaultedOptions, kind));
+            wgslParts.push(highlightWGSL(wgsl, kind, defaultedOptions));
         }
 
         return {
