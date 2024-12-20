@@ -50,22 +50,22 @@ var RUST_TO_WGSL = (function (exports) {
 
     // Set of the most commonly encountered Pattern_White_Space characters.
     const whitespaceMostChars = new Set([
-        '\t',    // U+0009 (horizontal tab)
-        '\n',    // U+000A (line feed, aka newline)
-        ' ',     // U+0020 (space)
+        '\t',    // U+0009 Horizontal Tab
+        '\n',    // U+000A Line Feed, aka Newline
+        ' ',     // U+0020 Space
     ]);
 
     // Set of the less common Pattern_White_Space characters, which Rust treats the
     // same as space, tab and newline.
     const whitespaceRareChars = new Set([
-        '\u000B',// U+000B (vertical tab)
-        '\u000C',// U+000C (form feed)
-        '\r',    // U+000D (carriage return)
-        '\u0085',// U+0085 (next line)
-        '\u200E',// U+200E (left-to-right mark)
-        '\u200F',// U+200F (right-to-left mark)
-        '\u2028',// U+2028 (line separator)
-        '\u2029' // U+2029 (paragraph separator)
+        '\u000B',// U+000B Vertical Tab
+        '\u000C',// U+000C Form Feed
+        '\r',    // U+000D Carriage Return
+        '\u0085',// U+0085 Next Line
+        '\u200E',// U+200E Left-to-Right Mark
+        '\u200F',// U+200F Right-to-Left Mark
+        '\u2028',// U+2028 Line Separator
+        '\u2029' // U+2029 Paragraph Separator
     ]);
 
     /** #### Detects the most commonly encountered ‘Pattern_White_Space’ characters
