@@ -267,7 +267,7 @@ var RUST_TO_WGSL = (function (exports) {
 
             switch (partRef.kind) {
                 case 'WHITESPACE_MOST':
-                    if (isWhitespaceMost(c0)) { // WHITESPACE_MORE
+                    if (isWhitespaceMost(c0)) { // WHITESPACE_MOST
                         partRef.rust.push(c0); // more spaces, tabs or newlines
                     } else if (c0 >= '0' && c0 <= '9') { // NUM_DECIMAL_INTEGER
                         partRef = {
