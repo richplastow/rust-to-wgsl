@@ -333,7 +333,7 @@ var RUST_TO_WGSL = (function (exports) {
                             kind: 'SEMICOLON',
                             rust: [c0],
                         }, partRef);
-                    } else if (isWhitespaceRare(c0)) { // WHITESPACE_RARE
+                    } else if (isWhitespaceRare(c0)) { // WHITESPACE_RARE TODO
                         partRef = {
                             kind: 'WHITESPACE_RARE',
                             rust: [c0],
@@ -346,13 +346,6 @@ var RUST_TO_WGSL = (function (exports) {
                 case 'WHITESPACE_RARE':
                     if (isWhitespaceRare(c0)) { // WHITESPACE_RARE
                         partRef.rust.push(c0); // more unusual chars from ‘Pattern_White_Space’
-                    } else {
-                        pos -= 1; // step back one place, to recapture c0
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
                     }
                 case 'NUM_BINARY':
                     if (c0 === '0' || c0 === '1' || c0 === '_') {
