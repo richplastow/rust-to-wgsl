@@ -3,6 +3,8 @@ import { testExample02 } from './examples/run-02.mjs';
 import { testExample03 } from './examples/run-03.mjs';
 import { testExample04 } from './examples/run-04.mjs';
 
+import { testRenderNotice } from './lib/notices/render-notice.test.mjs';
+
 import { testTokenizeWhitespace } from './lib/rough-lexers/tokenize-whitespace.test.mjs';
 
 import { testPunctDelimDetection } from './lib/roughly-parse-rust/is-punct-delim.test.mjs';
@@ -19,6 +21,9 @@ testExample01();
 testExample02();
 testExample03();
 testExample04();
+
+// Notices.
+testRenderNotice();
 
 // Rough Lexers.
 testTokenizeWhitespace();
