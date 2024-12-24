@@ -4,13 +4,13 @@
 
 - Version: 0.0.1
 - Created: 2024-12-15 by Rich Plastow
-- Last updated: 2024-12-23 by Rich Plastow
+- Last updated: 2024-12-24 by Rich Plastow
 - Playground: <https://richplastow.com/rust-to-wgsl/>
 - Repo: <https://github.com/richplastow/rust-to-wgsl>
 
 ## Examples
 
-1. `node examples/run-01.mjs` Inline and block comments
+1. `node examples/run-01.mjs` Block and line comments
 2. `node examples/run-02.mjs` Rust’s `let` is equivalent to WGSL’s `var`
 3. `node examples/run-03.mjs` Rust chars have no WGSL equivalent
 4. `node examples/run-04.mjs` Rust strings have no WGSL equivalent

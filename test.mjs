@@ -5,10 +5,12 @@ import { testExample04 } from './examples/run-04.mjs';
 
 import { testRenderNotice } from './lib/notices/render-notice.test.mjs';
 
+import { testIsComment } from './lib/rough-lexers/is-comment.test.mjs';
+import { testIsWhitespace } from './lib/rough-lexers/is-whitespace.test.mjs';
+import { testTokenizeComment } from './lib/rough-lexers/tokenize-comment.test.mjs';
 import { testTokenizeWhitespace } from './lib/rough-lexers/tokenize-whitespace.test.mjs';
 
 import { testPunctDelimDetection } from './lib/roughly-parse-rust/is-punct-delim.test.mjs';
-import { testWhitespaceDetection } from './lib/roughly-parse-rust/is-whitespace.test.mjs';
 import { testHighlightWGSL } from './lib/highlight-wgsl/highlight-wgsl.test.mjs';
 import { testRoughlyParseRust } from './lib/roughly-parse-rust/roughly-parse-rust.test.mjs';
 import { testRoughlyTokenizeRust } from './lib/rough-lexers/roughly-tokenize-rust.test.mjs';
@@ -26,11 +28,13 @@ testExample04();
 testRenderNotice();
 
 // Rough Lexers.
+testIsComment();
+testIsWhitespace();
+testTokenizeComment();
 testTokenizeWhitespace();
 
 // Library.
 testPunctDelimDetection();
-testWhitespaceDetection();
 testHighlightWGSL();
 testRoughlyParseRust();
 testRoughlyTokenizeRust();

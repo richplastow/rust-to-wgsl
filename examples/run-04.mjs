@@ -9,8 +9,8 @@ export const testExample04 = () => {
     deep(runExample04(), {
         errors: [
             'Contains a string at pos 8',
-            'Contains a string at pos 152',
-            'Contains a string at pos 188',
+            'Contains a string at pos 149',
+            'Contains a string at pos 182',
         ],
         wgsl: expectedWGSL04
     }, 'Example 04');

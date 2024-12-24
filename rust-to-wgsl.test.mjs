@@ -80,7 +80,7 @@ export const testRustToWGSL = () => {
                 + 'class="wgsl-whitespace-most"> </span><span class="wgsl-comment">'
                 + '// middle</span><br /><span class="wgsl-unidentified">end</span>',
         },
-        'Typical inline comment, with class-prefix and HTML highlighting'
+        'Typical line comment, with class-prefix and HTML highlighting'
     );
 
     deep(

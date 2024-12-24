@@ -1,5 +1,5 @@
 export const rust01 =
-`// Inline comment
+`// Line comment
 /* Block
    comment */
 /* Nested /* comment */ */

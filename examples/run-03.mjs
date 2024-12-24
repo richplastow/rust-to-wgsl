@@ -9,7 +9,7 @@ export const testExample03 = () => {
     deep(runExample03(), {
         errors: [
             'Contains a char at pos 8',
-            'Contains a char at pos 133',
+            'Contains a char at pos 130',
         ],
         wgsl: expectedWGSL03
     }, 'Example 03');
