@@ -9,6 +9,7 @@ import { testIsComment } from './lib/rough-lexers/is-comment.test.mjs';
 import { testIsLiteralByteOrChar } from './lib/rough-lexers/is-literal-byte-or-char.test.mjs';
 import { testIsWhitespace } from './lib/rough-lexers/is-whitespace.test.mjs';
 import { testTokenizeComment } from './lib/rough-lexers/tokenize-comment.test.mjs';
+import { testTokenizeLiteralByteOrChar } from './lib/rough-lexers/tokenize-literal-byte-or-char.test.mjs';
 import { testTokenizeWhitespace } from './lib/rough-lexers/tokenize-whitespace.test.mjs';
 
 import { testPunctDelimDetection } from './lib/roughly-parse-rust/is-punct-delim.test.mjs';
@@ -33,6 +34,7 @@ testIsComment();
 testIsLiteralByteOrChar();
 testIsWhitespace();
 testTokenizeComment();
+testTokenizeLiteralByteOrChar();
 testTokenizeWhitespace();
 
 // Library.
