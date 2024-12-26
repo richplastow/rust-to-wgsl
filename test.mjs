@@ -11,7 +11,7 @@ import { testIsString } from './lib/rough-lexers/is-string.test.mjs';
 import { testIsWhitespace } from './lib/rough-lexers/is-whitespace.test.mjs';
 import { testTokenizeComment } from './lib/rough-lexers/tokenize-comment.test.mjs';
 import { testTokenizeLiteralByteOrChar } from './lib/rough-lexers/tokenize-literal-byte-or-char.test.mjs';
-// import { testTokenizeString } from './lib/rough-lexers/tokenize-string.test.mjs';
+import { testTokenizeLiteralString } from './lib/rough-lexers/tokenize-literal-string.test.mjs';
 import { testTokenizeWhitespace } from './lib/rough-lexers/tokenize-whitespace.test.mjs';
 
 import { testPunctDelimDetection } from './lib/roughly-parse-rust/is-punct-delim.test.mjs';
@@ -38,7 +38,7 @@ testIsString();
 testIsWhitespace();
 testTokenizeComment();
 testTokenizeLiteralByteOrChar();
-// testTokenizeString();
+testTokenizeLiteralString();
 testTokenizeWhitespace();
 
 // Library.
