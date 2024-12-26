@@ -6,7 +6,7 @@ import { testExample04 } from './examples/run-04.mjs';
 import { testRenderNotice } from './lib/notices/render-notice.test.mjs';
 
 import { testIsComment } from './lib/rough-lexers/is-comment.test.mjs';
-import { testIsLiteralChar } from './lib/rough-lexers/is-literal-char.test.mjs';
+import { testIsLiteralByteOrChar } from './lib/rough-lexers/is-literal-byte-or-char.test.mjs';
 import { testIsWhitespace } from './lib/rough-lexers/is-whitespace.test.mjs';
 import { testTokenizeComment } from './lib/rough-lexers/tokenize-comment.test.mjs';
 import { testTokenizeWhitespace } from './lib/rough-lexers/tokenize-whitespace.test.mjs';
@@ -30,7 +30,7 @@ testRenderNotice();
 
 // Rough Lexers.
 testIsComment();
-testIsLiteralChar();
+testIsLiteralByteOrChar();
 testIsWhitespace();
 testTokenizeComment();
 testTokenizeWhitespace();
