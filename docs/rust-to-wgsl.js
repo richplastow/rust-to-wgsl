@@ -711,7 +711,7 @@ var RUST_TO_WGSL = (function (exports) {
     };
 
     const rust01 =
-`// Inline comment
+`// Line comment
 /* Block
    comment */
 /* Nested /* comment */ */
@@ -727,16 +727,16 @@ let c = a + b;
 
     const rust03 =
 `let a = 'A';
-// let b = 'B'; commented-out with an inline comment
+// let b = 'B'; commented-out with a line comment
 /* let c = 'C'; commented-out with a block comment */
 let eAcute = '\\u{c9}';
 `;
 
     const rust04 =
 `let a = "Can \\\\ contain \\" backslashes";
-// let b = "Commented-out with an inline comment";
+// let b = "Commented-out with a line comment";
 /* let c = "Commented-out with a block comment"; */
-let d = "Not an // inline comment";
+let d = "Not a // line comment";
 let e = "Not a /* block */ comment";
 `;
 
