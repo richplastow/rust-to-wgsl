@@ -7,10 +7,12 @@ import { testRenderNotice } from './lib/notices/render-notice.test.mjs';
 
 import { testIsComment } from './lib/rough-lexers/is-comment.test.mjs';
 import { testIsLiteralByteOrChar } from './lib/rough-lexers/is-literal-byte-or-char.test.mjs';
-import { testIsString } from './lib/rough-lexers/is-string.test.mjs';
+import { testIsLiteralNumber } from './lib/rough-lexers/is-literal-number.test.mjs';
+import { testIsLiteralString } from './lib/rough-lexers/is-literal-string.test.mjs';
 import { testIsWhitespace } from './lib/rough-lexers/is-whitespace.test.mjs';
 import { testTokenizeComment } from './lib/rough-lexers/tokenize-comment.test.mjs';
 import { testTokenizeLiteralByteOrChar } from './lib/rough-lexers/tokenize-literal-byte-or-char.test.mjs';
+import { testTokenizeLiteralNumber } from './lib/rough-lexers/tokenize-literal-number.test.mjs';
 import { testTokenizeLiteralString } from './lib/rough-lexers/tokenize-literal-string.test.mjs';
 import { testTokenizeWhitespace } from './lib/rough-lexers/tokenize-whitespace.test.mjs';
 
@@ -34,11 +36,13 @@ testRenderNotice();
 // Rough Lexers.
 testIsComment();
 testIsLiteralByteOrChar();
-testIsString();
+testIsLiteralNumber();
+testIsLiteralString();
 testIsWhitespace();
 testTokenizeComment();
 testTokenizeLiteralByteOrChar();
 testTokenizeLiteralString();
+testTokenizeLiteralNumber();
 testTokenizeWhitespace();
 
 // Library.
