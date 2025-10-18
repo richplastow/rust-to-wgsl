@@ -1,4 +1,41 @@
-# Analysis of `rust-to-wgsl` Repository, mid October 2025
+## Roadmap
+
+The rust-to-wgsl repo focuses on language-level, syntax and data-type transpilation.
+
+- Developers are expected to write Rust code with the intention that it will be transpiled to WGSL. They will probably re-run rust-to-wgsl constantly during development.
+- rust-to-wgsl is not expected to be used on general, arbitrary Rust code.
+- The transpiled WGSL will not be ready to immediately run as a shader, because it won’t have any `@binding` etc. Other, downstream utilities have the job of inserting GPU entry-points etc — that’s not a job for rust-to-wgsl.
+
+* [ ] **PHASE 1: Lexer and punctuation handling (Known Bugs and Gaps)**
+   * [ ] Implement proper handling for the closing brace `}` and other punctuation. Ensuring every opened `{`/`(` is tokenized with a matching `}`/`)` token (and similarly for commas, etc.) will prevent malformed outputs. This is a relatively small fix in the lexer that will improve reliability.
+   * [ ] Complete the `WHITESPACE_RARE` handling and related TODOs. Finalize the logic to tokenize rare whitespace (or decide to normalize/ignore them) so that code with form-feed or vertical tabs doesn’t break the parser. Remove or implement the other small TODOs (like using full Unicode identifier sets) to make the lexer fully robust.
+* [ ] **PHASE 2: Unsupported constructs and diagnostics**
+   * [ ] Filter out or flag unsupported Rust keywords. In the transform phase, add cases to drop keywords like `mut`, `ref`, `crate`, etc., or at least produce a clear error if they appear.
+   * [ ] Add an explicit error for unsupported Rust types (or auto-convert where possible). For instance, if the input contains a variable of type `f64`, push an error like “`f64` not supported, use `f32`” (and optionally default to `f32`). Similarly, smaller ints (`i16`, `i8`, etc.) could default to `i32` or error out.
+   * [ ] Improve error messaging for literals. Rephrase errors to be more descriptive (e.g. “Rust string literal is not supported in WGSL”) and include the literal where helpful.
+* [ ] **PHASE 3: Functions and scopes**
+   * [ ] Implement parsing of function definitions (`fn`) and their bodies. Recognize `fn name(...){...}` blocks and ensure balanced braces.
+   * [ ] Omit visibility/lifetime modifiers; ensure parameter and return types use only WGSL-compatible types.
+* [ ] **PHASE 4: Control flow statements**
+   * [ ] Support `if`/`else` translation (copy largely as-is, preserving blocks and chains).
+   * [ ] Map `loop` and `while` to WGSL loop forms; disallow Rust `for x in 0..N` sugar initially (or transform to an indexed loop if/when supported).
+   * [ ] Ensure explicit `return` for non-void functions (or enforce explicit returns if Rust’s implicit last-expression return is used).
+* [ ] **PHASE 5: Structs and other types**
+   * [ ] Transpile `struct` definitions; strip `pub`; map/validate field types to WGSL equivalents.
+   * [ ] Transpile enums and tuples.
+   * [ ] Recognize and preserve WGSL vector/matrix keywords (`vecN<f32>`, `matMxN<f32>`).
+   * [ ] Decide on policy for aliases (defer or define minimal mappings), while ensuring unsupported types are rejected with clear errors.
+* [ ] **PHASE 6: Module imports**
+   * [ ] Remove top-level `mod`/`use` ‘boilerplate’ imports.
+   * [ ] Recognize top-level `mod`/`use` that import other `.rs` files that will *also* need to be transpiled, and convert them to Bevy-style WESL `#import` statements **without resolving them**.
+* [ ] **PHASE 7: Documentation and tidying**
+   * [ ] Document the supported Rust subset and coding conventions for writing Rust that will successfully transpile to WGSL.
+   * [ ] Clarify how to denote entry points and bindings (e.g., using raw WGSL attributes in Rust code).
+   * [ ] Update the README or wiki accordingly.
+
+===
+
+> *Below is an AI-assisted analysis of this project, mid October 2025*
 
 ## GitHub CoPilot in VS Code
 
@@ -41,7 +78,7 @@ I have observed that Rust and WGSL have similar syntax, and if I defined types l
   4. Uses `rust-to-wgsl` to transpile the assembled Rust code to WGSL
   5. Outputs a single .wgsl file
 
-By the way, an extra advantage to this approach is that we will end up with many functions which will run on the CPU (via WASM) or the GPU (in a WGSL 'compute' shader). That will add an extra layer lot of flexibilty, and could help improve overall performance.
+By the way, an extra advantage to this approach is that we will end up with many functions which will run on the CPU (via WASM) or the GPU (in a WGSL 'compute' shader). That will add an extra layer of flexibility, and could help improve overall performance.
 
 ===
 
@@ -440,7 +477,7 @@ Once I know this, I’ll dive into the current repo state and get you a detailed
 
 === 
 
-1. Review everything please, givene what we talked about above (the wider use-case, the new game engine for web browsers)
+1. Review everything please, given what we talked about above (the wider use-case, the new game engine for web browsers)
 2. Everything you mention, please
 3. No
 
@@ -454,9 +491,9 @@ Research completed in 14m • 25 sources • 8 searches
 
 ---
 
-# Rust-to-WGSL Repository Analysis and Roadmap
+#### Rust-to-WGSL Repository Analysis and Roadmap
 
-## Current Bugs and Limitations
+##### Current Bugs and Limitations
 
 * **Unsupported Rust features (Strings/Chars):** The converter does not support Rust string literals or char literals – it preserves them verbatim in output and flags errors. For example, the README explicitly notes “Rust chars have no WGSL equivalent” and “Rust strings have no WGSL equivalent”. In the code, encountering a `'` or `"` triggers an error message (`"Contains a char at pos X"` or `"Contains a string at pos X"`) and the literal is passed through to the WGSL output unchanged. As a result, any Rust code containing string/char literals will produce WGSL output that is invalid (WGSL has no string/char type) along with error messages indicating the unsupported literals.
 
@@ -470,7 +507,7 @@ Research completed in 14m • 25 sources • 8 searches
 
 * **Lack of deeper syntax understanding:** Currently, the transformation operates mostly at a lexical level – it splits the input into tokens and then, aside from a special case for `let`, it outputs the tokens essentially unchanged. This means there is no true parsing of Rust syntax or AST generation. As a result, more complex Rust constructs (function definitions, control flow, structs, etc.) aren’t translated beyond a superficial text substitution. For example, an entire `fn` function definition in Rust would mostly copy over to WGSL, even though WGSL’s function syntax is similar, there could be differences (attribute annotations for entry points, no concept of `pub`, etc.) which aren’t accounted for yet. There’s also no validation that, say, a `for` loop or iterators (which Rust has but WGSL does not in the same form) are disallowed – they would just be output and likely cause WGSL compilation errors. In essence, anything beyond the simplest expression or variable declaration may not be handled correctly at this stage. The project will need a more semantic approach as it evolves (or at least a richer rule-based transformation) to truly map Rust logic into valid WGSL code.
 
-## Recent Progress and Completed Features
+##### Recent Progress and Completed Features
 
 Despite the above limitations, the project has made solid progress in certain areas, especially in the past updates (version 0.0.2 as of Oct 2025). Notable recent accomplishments include:
 
@@ -482,11 +519,11 @@ Despite the above limitations, the project has made solid progress in certain ar
 
 * **HTML Highlighting in the Playground:** Another recently completed aspect is the **Playground** web interface and syntax highlighter. The project provides an interactive web page (hosted at the author’s site) where you can type Rust code and see highlighted WGSL output live. The underlying library supports an option to output highlighted HTML, wrapping tokens in `<span>` tags with CSS classes for keywords, numbers, comments, etc.. This is implemented in `highlightWGSL()` which assigns classes like `"keyword"`, `"number"`, `"comment"`, etc., to different token kinds. Tests confirm that highlighting works (for example, a test converting a sample code to HTML-highlighted WGSL shows the `<span class="...">` wrappers applied correctly). The existence of the `docs/` folder with a rollup build script and a versioned playground suggests that the author recently got the web demo fully working. In short, the tooling around the core conversion (the test suite, the playground, and the highlighter) is operational. These completed parts provide a good base to build upon.
 
-* **Basic Transformation Rule (let→var):** While most Rust tokens currently output “as is,” one concrete transformation rule has been implemented and tested: converting Rust’s `let` to WGSL’s `var`. This reflects the semantic difference that Rust’s `let` declares a mutable variable by default (which corresponds to `var` in WGSL, since WGSL’s `let` would mean an immutable constant). The code explicitly substitutes `wgsl: 'var'` when it encounters a `KEYWORD` token that is `"let"`. Example 2 confirms this behavior: the Rust code `let a: u32 = 1; ... let c = a + b;` results in WGSL `var a: u32 = 1; ... var c = a + b;`. This rule was likely one of the first transformation features added, but it’s noteworthy as *complete* – it was revisited and verified with tests and examples, so it works reliably now. It sets a pattern for how other rules (for other keywords or constructs) can be added going forward.
+* **Basic Transformation Rule (let→var):** While most Rust tokens currently output “as is,” one concrete transformation rule has been implemented and tested: converting Rust’s `let` to WGSL’s `var`. This reflects the semantic difference that Rust’s `let` declares a mutable variable by default (which corresponds to `var` in WGSL, since WGSL’s `let` would mean an immutable constant). The code explicitly substitutes `wgsl: 'var'` when it encounters a `KEYWORD` token that is `"let"`. Example 2 confirms this behaviour: the Rust code `let a: u32 = 1; ... let c = a + b;` results in WGSL `var a: u32 = 1; ... var c = a + b;`. This rule was likely one of the first transformation features added, but it’s noteworthy as *complete* – it was revisited and verified with tests and examples, so it works reliably now. It sets a pattern for how other rules (for other keywords or constructs) can be added going forward.
 
 Overall, the repository’s recent activity shows it has a solid foundation: the lexical analysis is quite thorough (especially for numbers and identifiers), the comment preservation and highlighting are in place, and a pipeline (with tests and a live playground) is operational. These completed parts provide a good base to build upon.
 
-## Recommended Roadmap and Priorities
+##### Recommended Roadmap and Priorities
 
 Given the wider goal – integrating this tool into a new web-based game engine (likely to automate shader generation for WebGPU) – the next steps should focus on expanding Rust-to-WGSL compatibility in a pragmatic, prioritized way. Below is a logical, prioritized roadmap:
 
@@ -537,4 +574,5 @@ Given the progress so far and these next steps, an approximate plan could be:
 
 Each implemented feature should be accompanied by new unit tests and example updates (just as you have done with the numeric literal tests and example cases). This will ensure regressions are caught and the tool remains reliable as it grows. With this roadmap, `rust-to-wgsl` can steadily move toward the ultimate goal: letting you write shader code in a Rust subset and seamlessly run it as WGSL in the browser – a powerful capability for your WebGPU-based game engine.
 
+===
 

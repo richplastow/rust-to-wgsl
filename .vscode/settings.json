@@ -4,13 +4,21 @@
         "impls",
         "isize",
         "Kleene",
+        "lexers",
         "nwxyz",
         "Plastow",
         "priv",
         "punct",
         "rustc",
+        "setscan",
+        "SPIR",
         "Subpattern",
+        "timjones",
+        "transpilable",
+        "Undoiverse",
+        "usize",
         "uvwxyz",
+        "WESL",
         "wgsl"
     ]
 }

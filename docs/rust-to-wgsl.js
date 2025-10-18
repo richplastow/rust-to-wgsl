@@ -257,8 +257,8 @@ var RUST_TO_WGSL = (function (exports) {
         }];
         let partRef = parts[0];
 
-        // Append `NULL`, which will help avoid some edge cases. The `NULL` will be
-        // removed before roughlyParseRust() `return`s.
+        // Append `NULL`, which will help avoid some edge cases. The `NULL` will
+        // be removed before roughlyParseRust() `return`s.
         const rustPlusNull = `${rust}\x00`;
 
         for (let pos=0; pos<rustPlusNull.length; pos++) {
