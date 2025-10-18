@@ -33,7 +33,7 @@
       border-radius: 0.5em;
       outline: none!important;
       text-decoration: none;
-      transition: color 0.5s, background 0.5s;
+      transition: color 0.5s, background 0.5s, opacity 0.5s;
     }
     nav ul, p {
       padding: 0 0.5em;
@@ -112,7 +112,7 @@
   <textarea id="input">Loading...</textarea><div id="output">Loading...</div>
   <pre id="results">Loading...</pre>
 
-  <script>
+  <script type="module">
     // Dependencies.
     const { rustToWGSL } = window.RUST_TO_WGSL;
 
@@ -122,9 +122,22 @@
     const $results = document.querySelector('#results');
     const $loadExample = document.querySelector('#load-example');
 
+    // Updates the 'load-example' buttons. When the contents of `$input`
+    // is identical to a button's `rust` value, that button is be disabled.
+    const updateButtonStates = () => {
+      $loadExample.querySelectorAll('a').forEach(($button) => {
+        const example = $button.getAttribute('data-example');
+        const identical = $input.value === window.RUST_TO_WGSL[`rust${example}`];
+        $button.style.pointerEvents = identical ? 'none' : '';
+        $button.style.opacity = identical ? 0.5 : 1;
+      });
+    };
+
     // Takes the content of the input <textarea>, uses rustToWGSL() to transform
     // it, and displays the result in the output <pre>. Also, shows any errors.
     const onInputChange = () => {
+      console.log('onInputChange()');
+      
       const { errors, wgsl } = rustToWGSL(
         $input.value,
         { classPrefix: 'wgsl-', highlight: 'HTML' }
@@ -137,12 +150,13 @@
         document.body.classList.remove('wgsl-errors');
         $results.innerText = 'No errors';
       }
+      updateButtonStates();
     };
 
     // Parse the input when it changes.
-    $input.addEventListener('keyup', onInputChange);
+    $input.addEventListener('input', onInputChange);
 
-    // Parse the input when the page loads.
+    // When the page loads, show example 2 (more interesting than example 1).
     $input.value = window.RUST_TO_WGSL.rust02;
     onInputChange();
 
