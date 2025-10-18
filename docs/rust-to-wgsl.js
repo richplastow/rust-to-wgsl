@@ -48,6 +48,576 @@ var RUST_TO_WGSL = (function (exports) {
         return `<span class="${className}">${htmlStr}</span>${trailingNLsHTML}`;
     };
 
+    const insertUnderscore = (noticeCode) => {
+        let str = noticeCode.toString();
+        return `${str[0]}_${str.slice(1)}`;
+    };
+
+    const renderNotice = (...noticeCodeAndValues) => {
+        const [ noticeCode, v0, v1, v2 ] = noticeCodeAndValues;
+        if (typeof noticeCode !== 'number') throw RangeError(
+            `noticeCode '${noticeCode}' is type '${typeof noticeCode}', not 'number'`);
+        if (isNaN(noticeCode)) throw RangeError(
+            `noticeCode is NaN (not a number)`);
+        if ((noticeCode % 1) !== 0) throw RangeError(
+            `noticeCode ${noticeCode} is not an integer`);
+        if (noticeCode < 1_0000 || noticeCode > 4_9999) throw RangeError(
+            `noticeCode ${noticeCode} is not between 1_0000 and 4_9999`);
+
+        switch (noticeCode) {
+
+            // Info.
+            case 2_2511: {
+                const [ tokenIndex, currPos, len ] = [ v0, v1, v2 ];
+                return `Token #${tokenIndex} at position ${currPos} contains ${len} `
+                    + `‘rare’ whitespace character${len === 1 ? '' : 's'}. `
+                    + 'Valid, but discouraged';
+            }
+
+            // Error.
+            case 4_6177: return 'Unterminated block comment';
+            case 4_8591: return 'Unterminated char literal'; // TODO NEXT
+            case 4_9122: return 'Unterminated string literal'; // TODO NEXT
+
+            // Not recognised.
+            default: throw RangeError(
+                `noticeCode ${insertUnderscore(noticeCode)} not recognised`);
+        }
+    };
+
+    /** #### Detects a pair of characters which begin a block comment
+     * 
+     * @param {string} char0  The first character - must be the '/' in '/*'
+     * @param {string} char1  The second character - must be the '*' in '/*'
+     * @returns {boolean}  `true` if the pair of characters begins a block comment
+     */
+    const isCommentBlockBegin = (char0, char1) =>
+        char0 === '/' && char1 === '*';
+
+    /** #### Detects a pair of characters which end a block comment
+     * 
+     * @param {string} char0  The first character - must be '*'
+     * @param {string} char1  The second character - must be '/'
+     * @returns {boolean}  `true` if the pair of characters begins a block comment
+     */
+    const isCommentBlockEnd = (char0, char1) =>
+        char0 === '*' && char1 === '/';
+
+    /** #### Detects a pair of characters which begin a line comment
+     * 
+     * @param {string} char0  The first character - must be the first '/' in '//'
+     * @param {string} char1  The second character - must be the second '/' in '//'
+     * @returns {boolean}  `true` if the pair of characters begins a line comment
+     */
+    const isCommentLineBegin = (char0, char1) =>
+        char0 === '/' && char1 === '/';
+
+    /** #### Detects a character which ends a line comment
+     * 
+     * In Rust, only a newline character or the end of the file ends a line comment.
+     * 
+     * @param {string} char0  The character - must be a newline
+     * @returns {boolean}  `true` if the character ends a line comment
+     */
+    const isCommentLineEnd = (char0) =>
+        char0 === '\n';
+
+    /** #### Detects a pair of characters which begin a comment
+     * 
+     * @param {string} char0  The first character - must be '/' in '/*' or '//'
+     * @param {string} char1  The second character - must be '*' in '/*' or '/' in '//'
+     * @returns {boolean}  `true` if the pair of characters begins a comment
+     */
+    const isCommentAnyBegin = (char0, char1) =>
+        (char0 === '/' && char1 === '*') || (char0 === '/' && char1 === '/');
+
+    /** #### Detects the pair of characters which begin a Rust byte literal
+     *
+     * @param {string} char0  The first character - the "b" in `b'H'`
+     * @param {string} char1  The second character - the first "'" in `b'H'`
+     * @returns {boolean}  `true` if the pair of chars could start a literal char
+     */
+    const isLiteralByteBegin = (char0, char1) =>
+        char0 === 'b' && char1 === "'";
+
+    /** #### Detects the single-quote character (begins a Rust char literal)
+     *
+     * @param {string} char0  The character - must be a single-quote "'"
+     * @returns {boolean}  `true` if the character could start a literal char
+     */
+    const isLiteralCharBegin = (char0) =>
+        char0 === "'";
+
+    /** #### Detects a pair of characters which begin a Rust byte or char literal
+     *
+     * In Rust, `b'H'` is a byte literal, `'H'` is a char literal.
+     *
+     * @param {string} char0  The first character - the "'" in `'H'` or "b" in `b'H'`
+     * @param {string} char1  The second character - the first "'" in `b'H'`
+     * @returns {boolean}  `true` if the pair of chars begins a literal byte or char
+     */
+    const isLiteralByteOrCharBegin = (char0, char1) =>
+        isLiteralCharBegin(char0) || isLiteralByteBegin(char0, char1);
+
+    /** #### Detects a Rust byte literal, and returns its end position
+     * 
+     * @param {string} char0  The first character - the "b" in `b'H'`
+     * @param {string} char1  The second character - the first "'" in `b'H'`
+     * @param {number} currPos  The current position in the source code, at `char0`
+     * @param {string} source  The Rust source code
+     * @returns {number|false}  The end position if a byte, or otherwise `false`
+     */
+    const isLiteralByteAndGetEndPos = (char0, char1, currPos, source) => {
+
+        // Verify that char0 is "b" and char1 is "'".
+        if (!isLiteralByteBegin(char0, char1)) return false;
+
+        const char2 = source[currPos + 2];
+        const char3 = source[currPos + 3];
+        if (!char3) return false; // source too short to be a byte
+
+        // Deal with the most typical case first - a simple byte, like `b'H'`.
+        if (char2 !== '\\') {
+            return char3 === "'" ? currPos + 4 : false;
+        }
+
+        // `char2` is a backslash, so the byte must be an escaped character.
+        // Deal with a less typical case - an 8-bit ‘byte escape’, eg `b'\xFF'`.
+        if (char3 === 'x') {
+            if (!source[currPos + 6]) return false; // too short for a byte escape
+            const chars4To6 = source.slice(currPos + 4, currPos + 7);
+            if (!/^[0-9a-fA-F]{2}'$/.test(chars4To6)) return false;
+            return currPos + 7;
+        }
+
+        // Deal with non-hex escaped characters, eg `b'\n'` or `b'\"'`.
+        // https://doc.rust-lang.org/reference/tokens.html#byte-escapes
+        // https://doc.rust-lang.org/reference/tokens.html#quote-escapes
+        const char4 = source[currPos + 4];
+        if (!char4) return false; // source too short
+        switch (char3) {
+            case 'n': case 'r': case 't': case '\\': case '0': case "'": case '"':
+                if (char4 === "'") return currPos + 5;
+        }
+
+        return false;
+    };
+
+    /** #### Detects a Rust char literal, and returns its end position
+     * 
+     * @param {string} char0  The character - must be a single-quote "'"
+     * @param {number} currPos  The current position in the source code, at `char0`
+     * @param {string} source  The Rust source code
+     * @returns {number|false}  The end position if a char, or otherwise `false`
+     */
+    const isLiteralCharAndGetEndPos = (char0, currPos, source) => {
+        if (!isLiteralCharBegin(char0)) return false;
+
+        const char1 = source[currPos + 1];
+        const char2 = source[currPos + 2];
+        if (!char2) return false; // source too short
+
+        // Deal with the most typical case first - a simple char, like `'H'`.
+        if (char1 !== '\\')
+            return char2 === "'" ? currPos + 3 : false;
+
+        // `char1` is a backslash, so the char must be an escaped character.
+        // Deal with a less typical case - a 7-bit ‘ASCII escape’, eg `b'\x7F'`.
+        if (char2 === 'x') {
+            if (!source[currPos + 5]) return false; // too short for a byte escape
+            const chars3To5 = source.slice(currPos + 3, currPos + 6);
+            if (!/^[0-7][0-9a-fA-F]'$/.test(chars3To5)) return false;
+            return currPos + 6;
+        }
+
+        // Deal with non-hex escaped characters, eg `'\n'` or `'\"'`.
+        // https://doc.rust-lang.org/reference/tokens.html#byte-escapes
+        // https://doc.rust-lang.org/reference/tokens.html#quote-escapes
+        const char3 = source[currPos + 3];
+        if (!char3) return false; // source too short
+        switch (char2) {
+            case 'n': case 'r': case 't': case '\\': case '0': case "'": case '"':
+                if (char3 === "'") return currPos + 4;
+        }
+
+        // Deal with unicode escapes like `'\u{1F600}'`. Note that chars like
+        // `'\u{}'` `'\u{XYZ}'` and `'\u{110000}'` are invalid.
+        if (char2 === 'u' && char3 === '{') {
+            let pos = currPos + 4;
+            let char = source[pos];
+            while (char && char !== '}') {
+                char = source[++pos];
+                // TODO handle invalid unicode escapes
+            }
+            if (char === '}' && source[pos + 1] === "'") return pos + 2;
+        }
+
+        return false;
+    };
+
+    /** #### Returns true if two characters could start a Rust string literal
+     *
+     * @param {string} char0  The first character, eg `"` in `"hello"`
+     * @param {string} char1  The second character, eg `h` in `"hello"`
+     * @returns {boolean}  `true` if the pair of chars could start a literal string
+     */
+    const isLiteralStringBegin = (char0, char1) => {
+        switch (true) {
+            case char0 === '"': // normal string "..."
+            case char0 === 'b' && char1 === '"': // byte string b"..."
+            case char0 === 'r' && char1 === '"': // raw string r"..."
+            case char0 === 'r' && char1 === '#': // raw string with hashes r#"..."#
+            case char0 === 'b' && char1 === 'r': // raw byte string br"..." or br#"..."#
+                return true;
+            default:
+                return false;
+        }
+    };
+
+    /** #### Detects a Rust string literal, and returns its end position
+     *
+     * @param {string} char0  The first character, eg `"` in `"hello"`
+     * @param {string} char1  The second character, eg `h` in `"hello"`
+     * @param {number} currPos  The current position in the source code, at `char0`
+     * @param {string} source  The Rust source code
+     * @returns {number|false}  The string’s end position, or `false` if invalid
+     */
+    const isLiteralStringAndGetEndPos = (char0, char1, currPos, source) => {
+        if (!isLiteralStringBegin(char0, char1)) return false;
+
+        let pos = currPos;
+
+        // Handle different string prefix types.
+        if (char0 === 'b' && char1 === 'r') {
+            pos += 2;
+        } else if (char0 === 'b' || char0 === 'r') {
+            pos += 1;
+        }
+
+        // Count start hashes for raw strings (max 255).
+        let hashesBefore = 0;
+        while (source[pos] === '#' && hashesBefore < 255) {
+            hashesBefore++;
+            pos++;
+        }
+        if (source[pos] !== '"') return false;
+
+        pos++;
+
+        // Raw strings (including raw byte strings).
+        if (hashesBefore > 0) {
+            while (pos < source.length) {
+                if (source[pos] === '"') {
+                    let hashesAfter = 0;
+                    pos++;
+                    while (source[pos] === '#' && hashesAfter < 255) {
+                        hashesAfter++;
+                        pos++;
+                    }
+                    if (hashesBefore === hashesAfter) return pos;
+                }
+                pos++;
+            }
+            return false;
+        }
+
+        // Regular strings and byte strings.
+        while (pos < source.length) {
+            if (source[pos] === '\\') {
+                pos += 2;
+                continue;
+            }
+            if (source[pos] === '"') return pos + 1;
+            pos++;
+        }
+
+        return false;
+    };
+
+    // Tokenizes a block or line comment.
+    const tokenizeCommentAny = (lex) => {
+        let { currChar, currPos, nextChar, source } = lex;
+        while (currPos < source.length) {
+            if (isCommentBlockBegin(currChar, nextChar)) {
+                tokenizeCommentBlock(lex);
+                currChar = lex.currChar;
+                currPos = lex.currPos;
+                nextChar = lex.nextChar;
+                continue;
+            }
+            if (isCommentLineBegin(currChar, nextChar)) {
+                tokenizeCommentLine(lex);
+                currChar = lex.currChar;
+                currPos = lex.currPos;
+                nextChar = lex.nextChar;
+                continue;
+            }
+            break; // not whitespace
+        }
+    };
+
+    // Tokenizes a block comment.
+    const tokenizeCommentBlock = (lex) => {
+        const { currChar, currPos, nextChar, notices, source, tokens } = lex;
+        const token = {
+            kind: 'COMMENT_BLOCK',
+            start: currPos,
+        };
+        tokens.push(token);
+
+        let pos = currPos + 1;
+        let c0 = source[++pos]; // the character after the '*' of '/*'...
+        let c1 = source[++pos]; // ...and the character after that
+        let depth = 1;
+        const chars = [currChar, nextChar];
+
+        while (pos < source.length) {
+            if (isCommentBlockEnd(c0, c1)) {
+                chars.push(c0, c1);
+                if (depth === 1) {
+                    break;
+                } else {
+                    depth -= 1;
+                    c0 = source[++pos];
+                    c1 = source[++pos];
+                    continue;
+                }
+            } else if (isCommentBlockBegin(c0, c1)) {
+                chars.push(c0, c1);
+                depth += 1;
+                c0 = source[++pos];
+                c1 = source[++pos];
+                continue;
+            }
+            chars.push(c0);
+            c0 = c1;
+            c1 = source[++pos];
+        }
+
+        if (depth > 0 && pos >= source.length) {
+            notices.push([4_6177]);
+            chars.push(c0);
+        }
+
+        token.chars = chars.join('');
+        lex.currPos = ++pos;
+        lex.currChar = source[pos];
+        lex.nextChar = source[pos + 1];
+    };
+
+    // Tokenizes a line comment.
+    const tokenizeCommentLine = (lex) => {
+        const { currChar, currPos, nextChar, source, tokens } = lex;
+        const token = {
+            kind: 'COMMENT_LINE',
+            start: currPos,
+        };
+        tokens.push(token);
+
+        let pos = currPos + 2;
+        let c0 = source[pos]; // the character after the second '/' of '//'
+        const chars = [currChar, nextChar];
+
+        while (pos < source.length) {
+            if (isCommentLineEnd(c0)) {
+                chars.push(c0); // the newline at the end of the line comment
+                pos += 1;
+                break;
+            }
+            chars.push(c0);
+            c0 = source[++pos];
+        }
+
+        token.chars = chars.join('');
+        lex.currPos = pos;
+        lex.currChar = source[pos];
+        lex.nextChar = source[pos + 1];
+    };
+
+    const tokenize = (lex, endPos, kind) => {
+        const { currPos, source, tokens } = lex;
+        const token = {
+            kind,
+            chars: source.slice(currPos, endPos),
+            start: currPos,
+        };
+        tokens.push(token);
+        lex.currChar = source[endPos];
+        lex.currPos = endPos;
+        lex.nextChar = source[endPos + 1];
+    };
+
+    // Tokenizes a literal byte or char.
+    const tokenizeLiteralByteOrChar = (lex) => {
+        let { currChar, currPos, nextChar, source, tokens } = lex;
+
+        // If the literal char or byte looks basically valid, tokenize it.
+        const endPosChar = isLiteralCharAndGetEndPos(currChar, currPos, source);
+        if (endPosChar !== false) {
+            tokenize(lex, endPosChar, 'LITERAL_CHAR');
+            return;
+        }
+        const endPosByte = isLiteralByteAndGetEndPos(currChar, nextChar, currPos, source);
+        if (endPosByte !== false) {
+            tokenize(lex, endPosByte, 'LITERAL_BYTE');
+            return;
+        }
+
+        // Otherwise, mark this as a single-character token, and let the caller move
+        // on to the next character.
+        const token = {
+            chars: currChar,
+            start: currPos,
+        };
+        tokens.push(token);
+        lex.currChar = nextChar;
+        lex.currPos = currPos + 1;
+        lex.nextChar = source[currPos + 2];
+        if (currChar === "'") {
+            token.kind = 'LIFETIME_MARKER';
+        } else {
+            token.kind = 'IDENTIFIER';
+        }
+    };
+
+    // Tokenizes a string literal.
+    const tokenizeLiteralString = (lex) => {
+        let { currChar, currPos, nextChar, source, tokens } = lex;
+
+        // If the literal string looks basically valid, tokenize it.
+        const endPos = isLiteralStringAndGetEndPos(currChar, nextChar, currPos, source);
+        if (endPos !== false) {
+            const token = {
+                kind: 'LITERAL_STRING',
+                chars: source.slice(currPos, endPos),
+                start: currPos,
+            };
+            tokens.push(token);
+            lex.currChar = source[endPos];
+            lex.currPos = endPos;
+            lex.nextChar = source[endPos + 1];
+            return;
+        }
+
+        // Otherwise, mark this as a non-string token, and let the caller move on to
+        // the next character.
+        const token = {
+            chars: currChar,
+            start: currPos,
+        };
+        tokens.push(token);
+
+        // For the special case of characters "br", tokenize them as an identifier.
+        // TODO - deal with a false positive for a raw byte string
+        if (currChar === 'b' && nextChar === 'r') {
+            lex.currChar = source[currPos + 2];
+            lex.currPos = currPos + 2;
+            lex.nextChar = source[currPos + 3];
+            token.chars = 'br';
+            token.kind = 'IDENTIFIER';
+            return;
+        }
+
+        // For all other cases, mark this as a single-character token.
+        lex.currChar = nextChar;
+        lex.currPos = currPos + 1;
+        lex.nextChar = source[currPos + 2];
+        if (currChar === '"') {
+            token.kind = 'PUNCTUATION'; // TODO - deal with this false positive
+        } else { // "b" or "r"
+            token.kind = 'IDENTIFIER';
+        }
+    };
+
+    // Divides Rust source code into chars, comments, strings and everything else.
+    // TODO use a cache to speed up the process
+    const roughlyTokenizeRust = (source) => {
+        // Create the `lex` object, to store the state of the lexer.
+        let currChar = source[0];
+        let currPos = 0;
+        let nextChar = source[1];
+        const lex = {
+            currChar,
+            currPos,
+            nextChar,
+            notices: [], // error (4_), warning (3_), info (2_) and debug (1_)
+            source,
+            tokens: [],
+        };
+
+        const finalizeTbdChars = () => {
+            if (tbdChars) {
+                lex.tokens.at(-1).chars = tbdChars.join('');
+                tbdChars = false;
+            }
+        };
+
+        // Divide into chars, comments, strings and everything else.
+        // TODO use cached tokens to speed up the process
+        let tbdChars = false;
+        while (currPos < source.length) {
+            currChar = lex.currChar;
+            currPos = lex.currPos;
+            nextChar = lex.nextChar;
+            if (isLiteralByteOrCharBegin(currChar, nextChar)) {
+                finalizeTbdChars();
+                tokenizeLiteralByteOrChar(lex);
+            } else if (isCommentAnyBegin(currChar, nextChar)) {
+                finalizeTbdChars();
+                tokenizeCommentAny(lex);
+            } else if (isLiteralStringBegin(currChar, nextChar)) {
+                finalizeTbdChars();
+                tokenizeLiteralString(lex);
+            } else {
+                if (tbdChars) {
+                    tbdChars.push(currChar);
+                } else {
+                    tbdChars = [currChar];
+                    lex.tokens.push({
+                        kind: 'TBD',
+                        chars: tbdChars,
+                        start: currPos,
+                    });
+                }
+                lex.currChar = lex.nextChar;
+                lex.currPos++;
+                lex.nextChar = source[lex.currPos + 1];
+            }
+            if (lex.currPos >= source.length) {
+                finalizeTbdChars();
+                break;
+            }
+        }
+
+        // TODO - restore whitespace tokenization
+        // if (isWhitespaceAny(lex.currChar)) {
+        //     tokenizeWhitespaceAny(lex);
+        // } else if (isCommentAnyBegin(lex.currChar, lex.nextChar)) {
+        //     tokenizeCommentAny(lex);
+        // } else if (isLiteralByteOrCharBegin(lex.currChar, lex.nextChar)) {
+        //     tokenizeLiteralByteOrChar(lex);
+        // }
+
+        // Add an error if a block comment, char or string did not end.
+        // const lastToken = lex.tokens.at(-1) || { kind: '' };
+        // switch (lastToken.kind) {
+        //     case 'COMMENT_BLOCK':
+        //         notices.push([4_6177]);
+        //         break;
+        //     case 'CHAR_LITERAL':
+        //         notices.push([4_8591]);
+        //         break;
+        //     case 'STRING_LITERAL':
+        //         notices.push([4_9122]);
+        //         break;
+        // }
+
+        return {
+            notices: lex.notices,
+            tokens: lex.tokens,
+        };
+    };
+
     // Set of the most commonly encountered Pattern_White_Space characters.
     const whitespaceMostChars = new Set([
         '\t',    // U+0009 Horizontal Tab
@@ -90,623 +660,125 @@ var RUST_TO_WGSL = (function (exports) {
      */
     const isWhitespaceRare = (char) => whitespaceRareChars.has(char);
 
-    const rustKeywords = new Set([
-        'abstract',
-        'as',
-        'async',
-        'await',
-        'become',
-        'box',
-        'break',
-        'const',
-        'continue',
-        'crate',
-        'do',
-        'dyn',
-        'else',
-        'enum',
-        'extern',
-        'false',
-        'final',
-        'fn',
-        'for',
-        'if',
-        'impl',
-        'in',
-        'let',
-        'loop',
-        'macro_rules', // TODO `c0 >= 'a' && c0 <= 'z'` misses this
-        'macro',
-        'match',
-        'mod',
-        'move',
-        'mut',
-        'override',
-        'priv',
-        'pub',
-        'ref',
-        'return',
-        'self',
-        'Self',
-        'static',
-        'struct',
-        'super',
-        'trait',
-        'true',
-        'try',
-        'type',
-        'typeof',
-        'union',
-        'unsafe',
-        'unsized',
-        'use',
-        'virtual',
-        'where',
-        'while',
-        'yield',
-        "'static", // TODO `c0 >= 'a' && c0 <= 'z'` misses this
-    ]);
-
-    const bothTypes = new Set([
-        'bool', // a true or false value (no storage representation specified)
-        'f32',  // an IEEE-754 binary32 floating point
-        'i32',  // a signed, two’s complement, 32-bit integer
-        'u32',  // an unsigned 32-bit integer
-    ]);
-
-    const rustTypes = new Set([
-        'bool', // both - a true or false value (no storage representation specified)
-        'char',
-        'str',
-        'String',
-        'Vec',
-        'Option',
-        'Box',
-        'f32', // both - an IEEE-754 binary32 floating point
-        'f64',
-        'i8',
-        'i16',
-        'i32', // both - a signed, two’s complement, 32-bit integer
-        'i64',
-        'i128',
-        'isize',
-        'u8',
-        'u16',
-        'u32', // both - an unsigned 32-bit integer
-        'u64',
-        'u128',
-        'usize',
-    ]);
-
-    const wgslTypes = new Set([
-        // array<> types are very varied, so can’t just be looked up
-        'atomic<i32>',
-        'atomic<u32>',
-        'bool', //       both - a true or false value (no storage representation specified)
-        'f16',  // 1.0h  an IEEE-754 binary16 floating point (if extension enabled)
-        'f32',  // 1.0f  both - an IEEE-754 binary32 floating point
-        'i32',  // 1i    both - a signed, two’s complement, 32-bit integer
-        'mat2x2f',
-        'mat2x3f',
-        'mat2x4f',
-        'mat3x2f',
-        'mat3x3f',
-        'mat3x4f',
-        'mat4x2f',
-        'mat4x3f',
-        'mat4x4f',
-        'mat2x2h', // if f16 extension enabled
-        'mat2x3h', // if f16 extension enabled
-        'mat2x4h', // if f16 extension enabled
-        'mat3x2h', // if f16 extension enabled
-        'mat3x3h', // if f16 extension enabled
-        'mat3x4h', // if f16 extension enabled
-        'mat4x2h', // if f16 extension enabled
-        'mat4x3h', // if f16 extension enabled
-        'mat4x4h', // if f16 extension enabled
-        'mat2x2<f32>',
-        'mat2x3<f32>',
-        'mat2x4<f32>',
-        'mat3x2<f32>',
-        'mat3x3<f32>',
-        'mat3x4<f32>',
-        'mat4x2<f32>',
-        'mat4x3<f32>',
-        'mat4x4<f32>',
-        'mat2x2<f16>', // if f16 extension enabled
-        'mat2x3<f16>', // if f16 extension enabled
-        'mat2x4<f16>', // if f16 extension enabled
-        'mat3x2<f16>', // if f16 extension enabled
-        'mat3x3<f16>', // if f16 extension enabled
-        'mat3x4<f16>', // if f16 extension enabled
-        'mat4x2<f16>', // if f16 extension enabled
-        'mat4x3<f16>', // if f16 extension enabled
-        'mat4x4<f16>', // if f16 extension enabled
-        'u32', // 1u     both - an unsigned 32-bit integer
-        'vec2<f16>', // if f16 extension enabled
-        'vec2<f32>',
-        'vec2<i32>',
-        'vec2<u32>',
-        'vec2f',
-        'vec2h', // if f16 extension enabled
-        'vec2i',
-        'vec2u',
-        'vec3<f16>', // if f16 extension enabled
-        'vec3<f32>',
-        'vec3<i32>',
-        'vec3<u32>',
-        'vec3f',
-        'vec3h', // if f16 extension enabled
-        'vec3i',
-        'vec3u',
-        'vec4<f16>', // if f16 extension enabled
-        'vec4<f32>',
-        'vec4<i32>',
-        'vec4<u32>',
-        'vec4f',
-        'vec4h', // if f16 extension enabled
-        'vec4i',
-        'vec4u',
-    ]);
-
-    const roughlyParseRust = (rust) => {
-        const errors = [];
-        const parts = [{
-            kind: 'WHITESPACE_MOST', // start with zero or more whitespace characters
-            rust: [],
-        }];
-        let partRef = parts[0];
-
-        // Append `NULL`, which will help avoid some edge cases. The `NULL` will
-        // be removed before roughlyParseRust() `return`s.
-        const rustPlusNull = `${rust}\x00`;
-
-        for (let pos=0; pos<rustPlusNull.length; pos++) {
-            const c0 = rustPlusNull[pos];
-            const c1 = rustPlusNull[pos+1]; // possibly undefined
-
-            switch (partRef.kind) {
-                case 'WHITESPACE_MOST':
-                    if (isWhitespaceMost(c0)) { // WHITESPACE_MOST
-                        partRef.rust.push(c0); // more spaces, tabs or newlines
-                    } else if (c0 >= '0' && c0 <= '9') { // NUM_DECIMAL_INTEGER
-                        partRef = {
-                            kind: 'NUM_DECIMAL_INTEGER', // but may change, depending on what comes next
-                            pos, // used for error message TODO remove if not used
-                            rust: [c0],
-                        };
-                        parts.push(partRef);
-                    } else if (c0 === '_' || (c0 >= 'a' && c0 <= 'z') || (c0 >= 'A' && c0 <= 'Z')) { // IDENTIFIER
-                        // TODO full XID_Start set
-                        partRef = {
-                            kind: 'UNIDENTIFIED',
-                            pos, // used for error message TODO remove if not used
-                            rust: [c0],
-                        };
-                        parts.push(partRef);
-                    } else if (c0 === '/' && c1 === '*') { // BLOCK_COMMENT
-                        pos += 1;
-                        partRef = {
-                            depth: 1,
-                            kind: 'BLOCK_COMMENT',
-                            rust: ['/','*'],
-                        };
-                        parts.push(partRef);
-                    } else if (c0 === '/' && c1 === '/') { // INLINE_COMMENT
-                        pos += 1;
-                        partRef = {
-                            kind: 'INLINE_COMMENT',
-                            rust: ['/','/'],
-                        };
-                        parts.push(partRef);
-                    } else if (c0 === "'") { // CHAR_LITERAL
-                        errors.push(`Contains a char at pos ${pos}`);
-                        partRef = {
-                            kind: 'CHAR_LITERAL',
-                            pos, // used for error message TODO remove if not used
-                            rust: [c0],
-                        };
-                        parts.push(partRef);
-                    } else if (c0 === '"') { // STRING_LITERAL
-                        errors.push(`Contains a string at pos ${pos}`);
-                        partRef = {
-                            kind: 'STRING_LITERAL',
-                            pos, // used for error message TODO remove if not used
-                            rust: [c0],
-                        };
-                        parts.push(partRef);
-                    } else if (c0 === '{') { // BRACKET_CURLY_OPEN
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push({
-                            kind: 'BRACKET_CURLY_OPEN',
-                            rust: [c0],
-                        }, partRef);
-                    } else if (c0 === ';') { // SEMICOLON
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push({
-                            kind: 'SEMICOLON',
-                            rust: [c0],
-                        }, partRef);
-                    } else if (isWhitespaceRare(c0)) { // WHITESPACE_RARE TODO
-                        partRef = {
-                            kind: 'WHITESPACE_RARE',
-                            rust: [c0],
-                        };
-                        parts.push(partRef);
-                    } else {
-                        partRef.rust.push(c0);
-                    }
-                    break;
-                case 'WHITESPACE_RARE':
-                    if (isWhitespaceRare(c0)) { // WHITESPACE_RARE
-                        partRef.rust.push(c0); // more unusual chars from ‘Pattern_White_Space’
-                    }
-                case 'NUM_BINARY':
-                    if (c0 === '0' || c0 === '1' || c0 === '_') {
-                        partRef.rust.push(c0); // another character in the binary integer
-                    } else if (c0 === 'i' || c0 === 'u') {
-                        if (c1 === '8') {
-                            partRef.rust.push(c0, c1); // 8-bit signed or unsigned integer
-                            pos += 1;
-                        } else if (['16','32','64'].includes(rustPlusNull.slice(pos + 1, pos + 3))) {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 3)); // 16/32/64-bit signed or unsigned integer
-                            pos += 2;
-                        } else if (rustPlusNull.slice(pos + 1, pos + 4) === '128') {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 4)); // 128-bit signed or unsigned integer
-                            pos += 3;
-                        } else if (rustPlusNull.slice(pos + 1, pos + 5) === 'size') {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 5)); // device-size signed or unsigned integer
-                            pos += 4;
-                        } else {
-                            pos -= 1; // step back one place, to recapture the 'i' or 'u'
-                            partRef = {
-                                kind: 'WHITESPACE_MOST',
-                                rust: [],
-                            };
-                            parts.push(partRef);    
-                        }
-                    } else if (partRef.rust.length === 2 || partRef.rust.slice(2).every(c => c === '_')) { // never found a valid digit
-                        pos -= partRef.rust.length; // step back two or more places, to recapture the 'b' and any '_' chars
-                        partRef.kind = 'NUM_DECIMAL_INTEGER';
-                        partRef.rust = ['0'];
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);    
-                    } else {
-                        pos -= 1; // step back one place, to recapture c0
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-                case 'NUM_DECIMAL_FLOAT':
-                    if ((c0 >= '0' && c0 <= '9') || c0 === '_') { // already has its '.'
-                        partRef.rust.push(c0); // another character in the decimal float
-                    } else if (c0 === 'f') {
-                        if (['32','64'].includes(rustPlusNull.slice(pos + 1, pos + 3))) {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 3)); // 32/64-bit float suffix
-                            pos += 2;
-                        } else {
-                            pos -= 1; // step back one place, to recapture the 'f'
-                        }
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);    
-                    } else {
-                        pos -= 1; // step back one place, to recapture c0
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-                case 'NUM_DECIMAL_INTEGER':
-                    if ((c0 >= '0' && c0 <= '9') || c0 === '_') {
-                        partRef.rust.push(c0); // another character in the decimal integer
-                    } else if (c0 === '.') {
-                        partRef.kind = 'NUM_DECIMAL_FLOAT'; // change to a floating point number
-                        partRef.rust.push(c0); // the decimal point
-                    } else if (c0 === 'f') { // !!!! IMPORTANT !!!! must be placed before `(partRef.rust.length === 1 && partRef.rust[0] === '0')`
-                        if (['32','64'].includes(rustPlusNull.slice(pos + 1, pos + 3))) {
-                            partRef.kind = 'NUM_DECIMAL_FLOAT'; // change to a floating point number
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 3)); // 32/64-bit floating point
-                            pos += 2;
-                        } else {
-                            pos -= 1; // step back one place, to recapture the 'f'
-                        }
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);    
-                    } else if (c0 === 'i' || c0 === 'u') { // !!!! IMPORTANT !!!! must be placed before `(partRef.rust.length === 1 && partRef.rust[0] === '0')`
-                        if (c1 === '8') {
-                            partRef.rust.push(c0, c1); // 8-bit signed or unsigned integer
-                            pos += 1;
-                        } else if (['16','32','64'].includes(rustPlusNull.slice(pos + 1, pos + 3))) {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 3)); // 16/32/64-bit signed or unsigned integer
-                            pos += 2;
-                        } else if (rustPlusNull.slice(pos + 1, pos + 4) === '128') {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 4)); // 128-bit signed or unsigned integer
-                            pos += 3;
-                        } else if (rustPlusNull.slice(pos + 1, pos + 5) === 'size') {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 5)); // device-size signed or unsigned integer
-                            pos += 4;
-                        } else {
-                            pos -= 1; // step back one place, to recapture the 'i' or 'u'
-                            partRef = {
-                                kind: 'WHITESPACE_MOST',
-                                rust: [],
-                            };
-                            parts.push(partRef);    
-                        }
-                    } else if (partRef.rust.length === 1 && partRef.rust[0] === '0') {
-                        if (c0 === 'b') {
-                            partRef.kind = 'NUM_BINARY'; // change to a binary number
-                            partRef.rust.push(c0);
-                        } else if (c0 === 'o') {
-                            partRef.kind = 'NUM_OCTAL'; // change to an octal number
-                            partRef.rust.push(c0);
-                        } else if (c0 === 'x') {
-                            partRef.kind = 'NUM_HEX'; // change to a hexadecimal number (tentative, until a valid digit is found)
-                            partRef.rust.push(c0);
-                        } else {
-                            pos -= 1; // step back one place, to recapture c0
-                            partRef = {
-                                kind: 'WHITESPACE_MOST',
-                                rust: [],
-                            };
-                            parts.push(partRef);
-                        }
-                    } else {
-                        pos -= 1; // step back one place, to recapture c0
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-                case 'NUM_HEX':
-                    if ((c0 >= '0' && c0 <= '9') || (c0 >= 'a' && c0 <= 'f') || (c0 >= 'A' && c0 <= 'F') || c0 === '_') {
-                        partRef.rust.push(c0); // another character in the hexadecimal integer
-                    } else if (c0 === 'i' || c0 === 'u') {
-                        if (c1 === '8') {
-                            partRef.rust.push(c0, c1); // 8-bit signed or unsigned integer
-                            pos += 1;
-                        } else if (['16','32','64'].includes(rustPlusNull.slice(pos + 1, pos + 3))) {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 3)); // 16/32/64-bit signed or unsigned integer
-                            pos += 2;
-                        } else if (rustPlusNull.slice(pos + 1, pos + 4) === '128') {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 4)); // 128-bit signed or unsigned integer
-                            pos += 3;
-                        } else if (rustPlusNull.slice(pos + 1, pos + 5) === 'size') {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 5)); // device-size signed or unsigned integer
-                            pos += 4;
-                        } else {
-                            pos -= 1; // step back one place, to recapture the 'i' or 'u'
-                            partRef = {
-                                kind: 'WHITESPACE_MOST',
-                                rust: [],
-                            };
-                            parts.push(partRef);    
-                        }
-                    } else if (partRef.rust.length === 2 || partRef.rust.slice(2).every(c => c === '_')) { // never found a valid digit
-                        pos -= partRef.rust.length; // step back two or more places, to recapture the 'x' and any '_' chars
-                        partRef.kind = 'NUM_DECIMAL_INTEGER';
-                        partRef.rust = ['0'];
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);    
-                    } else {
-                        pos -= 1; // step back one place, to recapture c0
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-                case 'NUM_OCTAL':
-                    if ((c0 >= '0' && c0 <= '7') || c0 === '_') {
-                        partRef.rust.push(c0); // another character in the octal integer
-                    } else if (c0 === 'i' || c0 === 'u') {
-                        if (c1 === '8') {
-                            partRef.rust.push(c0, c1); // 8-bit signed or unsigned integer
-                            pos += 1;
-                        } else if (['16','32','64'].includes(rustPlusNull.slice(pos + 1, pos + 3))) {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 3)); // 16/32/64-bit signed or unsigned integer
-                            pos += 2;
-                        } else if (rustPlusNull.slice(pos + 1, pos + 4) === '128') {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 4)); // 128-bit signed or unsigned integer
-                            pos += 3;
-                        } else if (rustPlusNull.slice(pos + 1, pos + 5) === 'size') {
-                            partRef.rust.push(...rustPlusNull.slice(pos, pos + 5)); // device-size signed or unsigned integer
-                            pos += 4;
-                        } else {
-                            pos -= 1; // step back one place, to recapture the 'i' or 'u'
-                            partRef = {
-                                kind: 'WHITESPACE_MOST',
-                                rust: [],
-                            };
-                            parts.push(partRef);    
-                        }
-                    } else if (partRef.rust.length === 2 || partRef.rust.slice(2).every(c => c === '_')) { // never found a valid digit
-                        pos -= partRef.rust.length; // step back two or more places, to recapture the 'o' and any '_' chars
-                        partRef.kind = 'NUM_DECIMAL_INTEGER';
-                        partRef.rust = ['0'];
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    } else {
-                        pos -= 1; // step back one place, to recapture c0
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-                case 'UNIDENTIFIED':
-                    // TODO full XID_Continue set
-                    if (c0 === '_' || (c0 >= '0' && c0 <= '9') || (c0 >= 'a' && c0 <= 'z') || (c0 >= 'A' && c0 <= 'Z')) {
-                        partRef.rust.push(c0); // another potential keyword character
-                    } else {
-                        const unidentified = partRef.rust.join('');
-                        if (rustKeywords.has(unidentified)) {
-                            partRef.kind = 'KEYWORD';
-                        } else if (bothTypes.has(unidentified)) {
-                            partRef.kind = 'TYPE_BOTH';
-                        } else if (rustTypes.has(unidentified)) {
-                            partRef.kind = 'TYPE_RUST';
-                        } else if (wgslTypes.has(unidentified)) {
-                            partRef.kind = 'TYPE_WGSL';
-                        }
-                        pos -= 1; // step back one place, to recapture c0
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-                case 'BLOCK_COMMENT':
-                    if (c0 === '/' && c1 === '*') {
-                        pos += 1;
-                        partRef.depth += 1;
-                        partRef.rust.push('/','*');
-                    } else if (c0 === '*' && c1 === '/') {
-                        pos += 1;
-                        partRef.depth -= 1;
-                        partRef.rust.push('*','/');
-                        if (partRef.depth === 0) {
-                            delete partRef.depth;
-                            partRef = {
-                                kind: 'WHITESPACE_MOST',
-                                rust: [],
-                            };
-                            parts.push(partRef);
-                        }
-                    } else {
-                        partRef.rust.push(c0);
-                    }
-                    break;
-                case 'INLINE_COMMENT':
-                    partRef.rust.push(c0);
-                    if (c0 === '\n') {
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-                case 'CHAR_LITERAL':
-                    partRef.rust.push(c0);
-                    if (c0 === "'") {
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-                case 'STRING_LITERAL':
-                    partRef.rust.push(c0);
-                    if (c0 === '\\' && c1 === '\\') { // escaped backslash
-                        pos += 1;
-                        partRef.rust.push(c1);
-                    } else if (c0 === '\\' && c1 === '"') { // escaped double-quote
-                        pos += 1;
-                        partRef.rust.push(c1);
-                    } else if (c0 === '"') {
-                        partRef = {
-                            kind: 'WHITESPACE_MOST',
-                            rust: [],
-                        };
-                        parts.push(partRef);
-                    }
-                    break;
-            }
-        }
-
-        // Remove the trailing `NULL`.
-        partRef.rust = partRef.rust.slice(0, -1);
-
-        // Add an error if a block comment, char or string was not ended correctly.
-        switch (partRef.kind) {
-            case 'BLOCK_COMMENT':
-                errors.push('Unterminated block comment');
-                break;
-            case 'CHAR_LITERAL':
-                errors.push('Unterminated char literal');
-                break;
-            case 'STRING_LITERAL':
-                errors.push('Unterminated string literal');
-                break;
-        }
-
-        // Remove and any empty parts (expected to just be unnecessary whitespace).
-        return {
-            errors,
-            parts: parts.filter(({ rust }) => rust.length),
-        };
+    const toString = (value) => {
+        if (typeof value === 'string') return value;
+        if (Array.isArray(value)) return value.join('');
+        return '';
     };
 
-    /** #### 
-     * 
-     * @param {*} parsedParts  
-     * @param {*} options 
-     * @returns 
-     */
-    const transformParts = (parsedParts, options) => {
+    const transformCode = (segment) => segment.replace(/\blet\b/g, 'var');
+
+    const pushPart = (parts, kind, wgsl) => {
+        if (!wgsl.length) return;
+        parts.push({ kind, wgsl });
+    };
+
+    const segmentTbd = (text, parts) => {
+        let currentKind = null;
+        let buffer = '';
+
+        const flush = () => {
+            if (!buffer) return;
+            if (currentKind === 'CODE') {
+                pushPart(parts, 'UNIDENTIFIED', transformCode(buffer));
+            } else {
+                pushPart(parts, currentKind, buffer);
+            }
+            buffer = '';
+        };
+
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            let kind;
+            if (isWhitespaceMost(char)) {
+                kind = 'WHITESPACE_MOST';
+            } else if (isWhitespaceRare(char)) {
+                kind = 'WHITESPACE_RARE';
+            } else {
+                kind = 'CODE';
+            }
+
+            if (kind !== currentKind) {
+                flush();
+                currentKind = kind;
+            }
+
+            buffer += char;
+        }
+
+        flush();
+    };
+
+    const transformParts = (tokens, options = {}) => {
         const errors = [];
         const parts = [];
 
-        for (let i=0; i<parsedParts.length; i++) {
-            const { kind, rust } = parsedParts[i];
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+            if (!token) continue;
+
+            const raw = toString(token.chars);
+            const { kind, start = 0 } = token;
 
             switch (kind) {
-                case 'KEYWORD':
-                    if (rust.join('') === 'let') {
-                        parts.push({
-                            kind,
-                            wgsl: 'var',
-                        });
+                case 'COMMENT_BLOCK':
+                    pushPart(parts, 'BLOCK_COMMENT', raw);
+                    break;
+                case 'COMMENT_LINE':
+                    pushPart(parts, 'INLINE_COMMENT', raw);
+                    break;
+                case 'LITERAL_STRING':
+                    errors.push(`Contains a string at pos ${start}`);
+                    pushPart(parts, 'STRING_LITERAL', raw);
+                    break;
+                case 'LITERAL_CHAR':
+                    errors.push(`Contains a char at pos ${start}`);
+                    pushPart(parts, 'CHAR_LITERAL', raw);
+                    break;
+                case 'LITERAL_BYTE':
+                    errors.push(`Contains a char at pos ${start}`);
+                    pushPart(parts, 'CHAR_LITERAL', raw);
+                    break;
+                case 'LIFETIME_MARKER': {
+                    if (raw === "'") {
+                        const next = tokens[i + 1];
+                        const isLifetime =
+                            next && next.start === start + raw.length && next.kind === 'IDENTIFIER';
+                        if (isLifetime) {
+                            pushPart(parts, 'UNIDENTIFIED', transformCode(raw));
+                        } else {
+                            errors.push(`Contains a char at pos ${start}`);
+                            errors.push('Unterminated char literal');
+                            pushPart(parts, 'CHAR_LITERAL', raw);
+                        }
                     } else {
-                        parts.push({
-                            kind,
-                            wgsl: rust.join(''),
-                        });    
+                        pushPart(parts, 'UNIDENTIFIED', transformCode(raw));
                     }
                     break;
+                }
+                case 'PUNCTUATION':
+                    if (raw === '"') {
+                        const prev = tokens[i - 1];
+                        const prevRaw = toString(prev?.chars);
+                        const escaped = prevRaw.endsWith('\\');
+                        if (!escaped) {
+                            errors.push(`Contains a string at pos ${start}`);
+                            errors.push('Unterminated string literal');
+                        }
+                        pushPart(parts, 'STRING_LITERAL', raw);
+                    } else {
+                        pushPart(parts, 'UNIDENTIFIED', transformCode(raw));
+                    }
+                    break;
+                case 'TBD':
+                    segmentTbd(raw, parts);
+                    break;
                 default:
-                    parts.push({
-                        kind,
-                        wgsl: rust.join(''),
-                    });
+                    pushPart(parts, 'UNIDENTIFIED', transformCode(raw));
                     break;
             }
         }
 
-        // 
         return { errors, parts };
     };
 
@@ -771,19 +843,29 @@ let e = "Not a /* block */ comment";
 
         const errors = [];
 
-        // Divide the Rust source code into parts of different kinds, for example
-        // 'BLOCK_COMMENT', 'KEYWORD' and 'NUM_HEX'.
-        const {
-            errors: parseErrors,
-            parts: parsedParts
-        } = roughlyParseRust(rust);
-        errors.push(...parseErrors);
+        // Divide the Rust source code into tokens such as comments, strings, chars
+        // and "to be determined" code blocks.
+        const { notices, tokens } = roughlyTokenizeRust(rust);
+        for (const notice of notices) {
+            errors.push(renderNotice(...notice));
+        }
 
         const {
             errors: transformationErrors,
             parts: transformedParts
-        } = transformParts(parsedParts);
+        } = transformParts(tokens, defaultedOptions);
         errors.push(...transformationErrors);
+
+        // TODO maybe find a more elegant way to ensure final newline... this suggests a problem with transformParts() or roughlyTokenizeRust()
+        if (rust.endsWith('\n')) {
+            const lastPart = transformedParts.at(-1);
+            if (!lastPart || !lastPart.wgsl.endsWith('\n')) {
+                transformedParts.push({
+                    kind: 'WHITESPACE_MOST',
+                    wgsl: '\n',
+                });
+            }
+        }
 
         const wgslParts = [];
         for (const { kind, wgsl } of transformedParts) {
