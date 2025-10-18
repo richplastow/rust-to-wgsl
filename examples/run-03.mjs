@@ -2,7 +2,7 @@ import { deepStrictEqual as deep } from 'assert';
 import { rustToWGSL } from '../rust-to-wgsl.mjs';
 import { rust03, expectedWGSL03 } from './code-03.mjs';
 
-/** #### 3. Rust strings have no WGSL equivalent */
+/** #### 3. Rust chars have no WGSL equivalent */
 export const runExample03 = () => rustToWGSL(rust03);
 
 export const testExample03 = () => {
