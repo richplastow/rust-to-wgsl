@@ -76,7 +76,7 @@ var RUST_TO_WGSL = (function (exports) {
 
             // Error.
             case 4_6177: return 'Unterminated block comment';
-            case 4_8591: return 'Unterminated char literal'; // TODO NEXT
+            case 4_8591: return 'Unterminated char!!! literal'; // TODO NEXT
             case 4_9122: return 'Unterminated string literal'; // TODO NEXT
 
             // Not recognised.

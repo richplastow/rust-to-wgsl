@@ -37,7 +37,7 @@ export const testRustToWGSL = () => {
     deep(
         fn('/*', void 0), // `options` can be undefined
         {
-            errors: [ 'Unterminated block comment' ],
+            errors: [ 'Unterminated block!!! comment' ],
             wgsl: '/*',
         },
         'Minimal unterminated block comment'
@@ -55,7 +55,7 @@ export const testRustToWGSL = () => {
     deep(
         fn('start /* ok */ mid /* outer /* inner */ end'),
         {
-            errors: [ 'Unterminated block comment' ],
+            errors: [ 'Unterminated block!!! comment' ],
             wgsl: 'start /* ok */ mid /* outer /* inner */ end',
         },
         'Typical unterminated block comment'
