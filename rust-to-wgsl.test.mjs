@@ -1,4 +1,4 @@
-import { deepStrictEqual as deep, throws } from 'assert';
+import { deepStrictEqual as deep, throws } from 'node:assert';
 import { rustToWGSL as fn } from './rust-to-wgsl.mjs';
 
 export const testRustToWGSL = () => {

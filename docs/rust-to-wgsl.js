@@ -53,8 +53,12 @@ var RUST_TO_WGSL = (function (exports) {
         return `${str[0]}_${str.slice(1)}`;
     };
 
-    const renderNotice = (...noticeCodeAndValues) => {
-        const [ noticeCode, v0, v1, v2 ] = noticeCodeAndValues;
+    /** #### Converts a notice code (and optional values) to a human-readable string
+     * @param {number} noticeCode  error (4_), warning (3_), info (2_) and debug (1_)
+     * @param {...(boolean | number | string)} noticeValues
+     * @returns {string}
+    */
+    const renderNotice = (noticeCode, ...noticeValues) => {
         if (typeof noticeCode !== 'number') throw RangeError(
             `noticeCode '${noticeCode}' is type '${typeof noticeCode}', not 'number'`);
         if (isNaN(noticeCode)) throw RangeError(
@@ -64,7 +68,18 @@ var RUST_TO_WGSL = (function (exports) {
         if (noticeCode < 1_0000 || noticeCode > 4_9999) throw RangeError(
             `noticeCode ${noticeCode} is not between 1_0000 and 4_9999`);
 
+        // TODO validate that all values are of expected type for each noticeCode
+        const [ v0, v1, v2 ] = noticeValues;
+
         switch (noticeCode) {
+
+            // Error.
+            case 4_6177: return 'Unterminated block!!! comment';
+            case 4_8591: return 'Unterminated char!!! literal'; // TODO NEXT
+            case 4_9122: return 'Unterminated string!!! literal'; // TODO NEXT
+
+            // Warning.
+            // (none yet)
 
             // Info.
             case 2_2511: {
@@ -74,10 +89,8 @@ var RUST_TO_WGSL = (function (exports) {
                     + 'Valid, but discouraged';
             }
 
-            // Error.
-            case 4_6177: return 'Unterminated block comment';
-            case 4_8591: return 'Unterminated char!!! literal'; // TODO NEXT
-            case 4_9122: return 'Unterminated string literal'; // TODO NEXT
+            // Debug.
+            // (none yet)
 
             // Not recognised.
             default: throw RangeError(
@@ -529,8 +542,21 @@ var RUST_TO_WGSL = (function (exports) {
         }
     };
 
-    // Divides Rust source code into chars, comments, strings and everything else.
-    // TODO use a cache to speed up the process
+    /**
+     * @typedef {'TBD' | 'LITERAL_BYTE' | 'LITERAL_CHAR' | 'LITERAL_STRING' | 'COMMENT_BLOCK' | 'COMMENT_LINE'} Kind
+     * @typedef {[noticeCode: number, tokenIndex?: number, charPos?: number, extraInfo?: number | string]} Notice
+     * @typedef {{
+     *   kind: Kind,
+     *   chars: string,
+     *   start: number
+     * }} Token
+     */
+
+    /** #### Divides Rust source code into chars, comments, strings and everything else
+     * @TODO use a cache to speed up the process
+     * @param {string} source The Rust source code to roughly tokenize
+     * @returns {{ notices: Notice[], tokens: Token[] }} The notices and tokens produced during roughly tokenization
+     */
     const roughlyTokenizeRust = (source) => {
         // Create the `lex` object, to store the state of the lexer.
         let currChar = source[0];
@@ -545,6 +571,13 @@ var RUST_TO_WGSL = (function (exports) {
             tokens: [],
         };
 
+        // `tbdChars` starts out as `false`, but becomes an array of characters
+        // when we start collecting 'to be done' chars...
+        /** @type false | string[] */
+        let tbdChars = false;
+
+        // ...and then `tbdChars` becomes `false` again when the end of the run of
+        // 'to be done' characters is reached.
         const finalizeTbdChars = () => {
             if (tbdChars) {
                 lex.tokens.at(-1).chars = tbdChars.join('');
@@ -554,7 +587,6 @@ var RUST_TO_WGSL = (function (exports) {
 
         // Divide into chars, comments, strings and everything else.
         // TODO use cached tokens to speed up the process
-        let tbdChars = false;
         while (currPos < source.length) {
             currChar = lex.currChar;
             currPos = lex.currPos;
@@ -852,7 +884,7 @@ let e = "Not a /* block */ comment";
 
         const {
             errors: transformationErrors,
-            parts: transformedParts
+            parts: transformedParts,
         } = transformParts(tokens, defaultedOptions);
         errors.push(...transformationErrors);
 

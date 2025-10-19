@@ -4,9 +4,10 @@
 
 - Version: 0.0.2
 - Created: 2024-12-15 by Rich Plastow
-- Last updated: 2025-10-18 by Rich Plastow
-- Playground: <https://richplastow.com/rust-to-wgsl/>
+- Updated: 2025-10-18 by Rich Plastow
+- License: MIT
 - Repo: <https://github.com/richplastow/rust-to-wgsl>
+- Playground: <https://richplastow.com/rust-to-wgsl/>
 
 ## Examples
 
@@ -17,7 +18,7 @@
 
 ## Unit tests
 
-`node test.mjs`
+`npm test`
 
 ## Resources
 
@@ -25,7 +26,7 @@
 - <https://shader-playground.timjones.io/> with Input format ‘WGSL’, Compiler #1
   ‘Tint’ ‘trunk’, Shader stage ‘\<all>’ and Output format ‘WGSL’
 
-## Build
+## Install and build
 
 ```zsh
 npm install --global rollup
@@ -33,7 +34,20 @@ npm install --global rollup
 # found 0 vulnerabilities
 rollup --version
 # rollup v4.52.5
-rollup -i rust-to-wgsl.mjs -o docs/rust-to-wgsl.js -f iife -n RUST_TO_WGSL
+npm install
+# (only installs the "@types/node" dev-dependency, ~3 MB for ~150 items)
+npm run build
 # rust-to-wgsl.mjs → docs/rust-to-wgsl.js...
 # created docs/rust-to-wgsl.js in 32ms
+```
+
+## Check types
+
+```zsh
+npm install --global typescript
+# added 1 package in 709ms
+tsc --version
+# Version 5.9.3
+tsc --noEmit && echo "no type-errors found"
+# no type-errors found
 ```

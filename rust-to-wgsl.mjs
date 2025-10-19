@@ -49,7 +49,7 @@ export const rustToWGSL = (rust, options = {}) => {
 
     const {
         errors: transformationErrors,
-        parts: transformedParts
+        parts: transformedParts,
     } = transformParts(tokens, defaultedOptions);
     errors.push(...transformationErrors);
 

@@ -1,0 +1,29 @@
+{
+  "name": "rust-to-wgsl",
+  "version": "0.0.2",
+  "description": "Transforms Rust source code to WebGPU Shading Language (WGSL) source code",
+  "keywords": [
+    "rust",
+    "webgpu",
+    "wgsl"
+  ],
+  "homepage": "https://richplastow.com/rust-to-wgsl/",
+  "bugs": {
+    "url": "https://github.com/richplastow/rust-to-wgsl/issues"
+  },
+  "license": "MIT",
+  "author": "Rich Plastow",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richplastow/rust-to-wgsl.git"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "build": "rollup -i rust-to-wgsl.mjs -o docs/rust-to-wgsl.js -f iife -n RUST_TO_WGSL",
+    "test": "node test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.8.1"
+  },
+  "type": "module"
+}
